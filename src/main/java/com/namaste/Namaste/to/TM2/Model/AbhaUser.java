@@ -1,26 +1,26 @@
 package com.namaste.Namaste.to.TM2.Model;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "abha_users")
+@Document(collection = "abha_users")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class AbhaUser {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(unique = true, nullable = false)
+    @Indexed(unique = true)
     private String healthId;
 
-    @Column(unique = true)
+    @Indexed(unique = true)
     private String healthIdNumber;
 
     private String name;
@@ -33,7 +33,6 @@ public class AbhaUser {
     private String district;
     private String pincode;
 
-    @Column(columnDefinition = "TEXT")
     private String encryptedAadhaar;
 
     private boolean isActive = true;
@@ -43,7 +42,6 @@ public class AbhaUser {
     private LocalDateTime createdAt = LocalDateTime.now();
     private LocalDateTime updatedAt = LocalDateTime.now();
 
-    @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }

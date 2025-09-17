@@ -1,23 +1,23 @@
 package com.namaste.Namaste.to.TM2.Model;
 
-import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
+import org.springframework.data.mongodb.core.mapping.Document;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "abha_transactions")
+@Document(collection = "abha_transactions")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 public class AbhaTransaction {
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    @Column(unique = true, nullable = false)
+    @Indexed(unique = true)
     private String txnId;
 
     private String healthId;
@@ -25,10 +25,7 @@ public class AbhaTransaction {
     private String transactionType; // REGISTRATION, LOGIN, PROFILE_UPDATE, etc.
     private String status; // PENDING, COMPLETED, FAILED, EXPIRED
 
-    @Column(columnDefinition = "TEXT")
     private String requestData;
-
-    @Column(columnDefinition = "TEXT")
     private String responseData;
 
     private String errorCode;

@@ -1,0 +1,530 @@
+{
+  "info": {
+    "name": "NAMASTE-TM2 FHIR Terminology Service",
+    "description": "Complete collection for testing FHIR R4-compliant terminology microservice with NAMASTE, WHO Ayurveda, ICD-11 TM2, and Biomedicine dual coding",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8082",
+      "type": "string"
+    },
+    {
+      "key": "patient_id",
+      "value": "patient-123",
+      "type": "string"
+    },
+    {
+      "key": "namaste_code",
+      "value": "NAM001",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Health Check",
+      "item": [
+        {
+          "name": "Terminology Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "health"
+              ]
+            }
+          }
+        },
+        {
+          "name": "FHIR Service Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/fhir/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "fhir",
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Terminology Search & Mapping",
+      "item": [
+        {
+          "name": "Auto-Complete Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/autocomplete?query=fever&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "autocomplete"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "fever"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Details by NAMASTE Name",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/name/Vataj Jwara",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "name",
+                "Vataj Jwara"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Details by NAMASTE Code",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/code/{{namaste_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "code",
+                "{{namaste_code}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "NAMASTE → ICD-11 TM2 Translation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/translate/tm2/{{namaste_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "translate",
+                "tm2",
+                "{{namaste_code}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "NAMASTE → ICD-11 Biomedicine Translation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/translate/biomedicine/{{namaste_code}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "translate",
+                "biomedicine",
+                "{{namaste_code}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reverse: ICD-11 TM2 → NAMASTE",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/reverse/tm2/XM4KH5",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "reverse",
+                "tm2",
+                "XM4KH5"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reverse: ICD-11 Biomedicine → NAMASTE",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/reverse/biomedicine/XN1Z8",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "reverse",
+                "biomedicine",
+                "XN1Z8"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Terminology Statistics",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/stats",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "stats"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Search by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/category/Ayurveda",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "category",
+                "Ayurveda"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Comprehensive Search",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/terminology/search?query=jwara",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "terminology",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "query",
+                  "value": "jwara"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. FHIR Resource Creation",
+      "item": [
+        {
+          "name": "Create FHIR Condition (Problem List)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"namasteCode\": \"{{namaste_code}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/fhir/problem-list",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "fhir",
+                "problem-list"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create FHIR Encounter Bundle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"encounterId\": \"encounter-456\",\n  \"namasteCodes\": [\"NAM001\", \"NAM002\", \"NAM003\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/fhir/encounter-bundle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "fhir",
+                "encounter-bundle"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Sample FHIR Bundle",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/fhir/sample-bundle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "fhir",
+                "sample-bundle"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get NAMASTE FHIR CodeSystem",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/fhir/codesystem/namaste",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "fhir",
+                "codesystem",
+                "namaste"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. FHIR Bundle Processing",
+      "item": [
+        {
+          "name": "Upload & Process FHIR Bundle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"transaction\", \n  \"entry\": [\n    {\n      \"resource\": {\n        \"resourceType\": \"Condition\",\n        \"id\": \"test-condition-1\",\n        \"code\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org.in/CodeSystem/namaste\",\n              \"code\": \"NAM001\",\n              \"display\": \"Vataj Jwara\"\n            }\n          ]\n        }\n      }\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/fhir/upload-bundle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "fhir",
+                "upload-bundle"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Validate FHIR Bundle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"resourceType\": \"Bundle\",\n  \"type\": \"transaction\",\n  \"entry\": [\n    {\n      \"resource\": {\n        \"resourceType\": \"Condition\",\n        \"code\": {\n          \"coding\": [\n            {\n              \"system\": \"http://terminology.hl7.org.in/CodeSystem/namaste\",\n              \"code\": \"NAM001\"\n            }\n          ]\n        }\n      }\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/fhir/validate-bundle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "fhir",
+                "validate-bundle"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Proper FHIR Service",
+      "item": [
+        {
+          "name": "Create Proper FHIR Condition",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"namasteCode\": \"{{namaste_code}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/proper-fhir/condition",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "proper-fhir",
+                "condition"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Proper FHIR Bundle",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patientId\": \"{{patient_id}}\",\n  \"encounterId\": \"encounter-789\",\n  \"namasteCodes\": [\"NAM001\", \"NAM004\"]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/proper-fhir/bundle",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "proper-fhir",
+                "bundle"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Proper FHIR CodeSystem",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/proper-fhir/codesystem/namaste",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "proper-fhir",
+                "codesystem",
+                "namaste"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Proper FHIR Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/proper-fhir/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "proper-fhir",
+                "health"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
