@@ -5,13 +5,8 @@ import com.namaste.Namaste.to.TM2.Repository.NamasteCodeRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,7 +22,7 @@ public class NamasteTerminologyService {
 
     /**
      * Auto-complete search for EMR UI - Primary method for clinical workflows
-     * Returns matching NAMASTE codes with all their ICD-11 mappings
+     * Returns matching traditional medicine codes with their TM2 mappings
      */
     public List<NamasteCode> searchForAutoComplete(String searchTerm, int maxResults) {
         log.info("Auto-complete search for term: {}", searchTerm);
@@ -36,27 +31,27 @@ public class NamasteTerminologyService {
             return List.of(); // Return empty list for very short search terms
         }
 
-        // Use pagination to limit results for performance
-        List<NamasteCode> results = namasteCodeRepository.findByNamasteNameContainingIgnoreCase(searchTerm.trim());
+        // Use the updated repository method
+        List<NamasteCode> results = namasteCodeRepository.findByCodeTitleContainingIgnoreCase(searchTerm.trim());
 
         // Limit results for performance
         return results.stream().limit(maxResults).collect(java.util.stream.Collectors.toList());
     }
 
     /**
-     * Get complete details by NAMASTE name - Main method for retrieving all mappings
+     * Get complete details by traditional medicine name - Main method for retrieving all mappings
      */
     public Optional<NamasteCode> getByNamasteName(String namasteName) {
-        log.info("Fetching details for NAMASTE name: {}", namasteName);
-        return namasteCodeRepository.findByNamasteName(namasteName);
+        log.info("Fetching details for traditional medicine name: {}", namasteName);
+        return namasteCodeRepository.findByCodeTitle(namasteName);
     }
 
     /**
-     * Get complete details by NAMASTE code
+     * Get complete details by traditional medicine code
      */
     public Optional<NamasteCode> getByNamasteCode(String namasteCode) {
-        log.info("Fetching details for NAMASTE code: {}", namasteCode);
-        return namasteCodeRepository.findByNamasteCode(namasteCode);
+        log.info("Fetching details for traditional medicine code: {}", namasteCode);
+        return namasteCodeRepository.findByCode(namasteCode);
     }
 
     /**
@@ -73,64 +68,61 @@ public class NamasteTerminologyService {
     }
 
     /**
-     * Get codes by traditional medicine category
+     * Get codes by traditional medicine category (type)
      */
     public List<NamasteCode> getByCategory(String category) {
         log.info("Fetching codes for category: {}", category);
-        return namasteCodeRepository.findByNamasteCategoryAndIsActiveTrue(category);
+        return namasteCodeRepository.findByType(category);
     }
 
     /**
-     * Get records with dual coding (both TM2 and Biomedicine codes available)
+     * Get records with dual coding - Note: Current document structure doesn't support dual coding
      */
     public List<NamasteCode> getRecordsWithDualCoding() {
-        log.info("Fetching records with dual coding");
-        // Use a query to find records with both mappings
-        return namasteCodeRepository.findByIcd11Tm2CodeIsNotNullAndIcd11BiomedicineCodeIsNotNullAndIsActiveTrue();
+        log.info("Fetching records with dual coding - returning empty list as not supported in current structure");
+        return List.of();
     }
 
     /**
-     * Translate NAMASTE code to ICD-11 TM2
+     * Translate traditional medicine code to ICD-11 TM2
      */
-    public Optional<String> translateToIcd11Tm2(String namasteCode) {
-        log.info("Translating NAMASTE code {} to ICD-11 TM2", namasteCode);
+    public Optional<String> translateToIcd11Tm2(String traditionalMedicineCode) {
+        log.info("Translating traditional medicine code {} to ICD-11 TM2", traditionalMedicineCode);
 
-        return namasteCodeRepository.findByNamasteCode(namasteCode)
-                .map(NamasteCode::getIcd11Tm2Code);
+        return namasteCodeRepository.findByCode(traditionalMedicineCode)
+                .map(NamasteCode::getTm2Code);
     }
 
     /**
-     * Translate NAMASTE code to ICD-11 Biomedicine
+     * Translate traditional medicine code to ICD-11 Biomedicine - Not supported in current structure
      */
-    public Optional<String> translateToIcd11Biomedicine(String namasteCode) {
-        log.info("Translating NAMASTE code {} to ICD-11 Biomedicine", namasteCode);
-
-        return namasteCodeRepository.findByNamasteCode(namasteCode)
-                .map(NamasteCode::getIcd11BiomedicineCode);
+    public Optional<String> translateToIcd11Biomedicine(String traditionalMedicineCode) {
+        log.info("Translating traditional medicine code {} to ICD-11 Biomedicine - not supported", traditionalMedicineCode);
+        return Optional.empty();
     }
 
     /**
-     * Reverse translate: Find NAMASTE code from ICD-11 TM2
+     * Reverse translate: Find traditional medicine code from ICD-11 TM2
      */
     public Optional<NamasteCode> findByIcd11Tm2Code(String icd11Tm2Code) {
-        log.info("Finding NAMASTE code for ICD-11 TM2: {}", icd11Tm2Code);
-        return namasteCodeRepository.findByIcd11Tm2Code(icd11Tm2Code);
+        log.info("Finding traditional medicine code for ICD-11 TM2: {}", icd11Tm2Code);
+        return namasteCodeRepository.findByTm2Code(icd11Tm2Code);
     }
 
     /**
-     * Reverse translate: Find NAMASTE code from ICD-11 Biomedicine
+     * Reverse translate: Find traditional medicine code from ICD-11 Biomedicine - Not supported
      */
     public Optional<NamasteCode> findByIcd11BiomedicineCode(String icd11BiomedicineCode) {
-        log.info("Finding NAMASTE code for ICD-11 Biomedicine: {}", icd11BiomedicineCode);
-        return namasteCodeRepository.findByIcd11BiomedicineCode(icd11BiomedicineCode);
+        log.info("Finding traditional medicine code for ICD-11 Biomedicine - not supported: {}", icd11BiomedicineCode);
+        return Optional.empty();
     }
 
     /**
-     * Get all active NAMASTE codes
+     * Get all active traditional medicine codes
      */
     public List<NamasteCode> getAllActiveCodes() {
-        log.info("Fetching all active NAMASTE codes");
-        return namasteCodeRepository.findByIsActiveTrueOrderByNamasteNameAsc();
+        log.info("Fetching all traditional medicine codes");
+        return namasteCodeRepository.findAllByOrderByCodeTitleAsc();
     }
 
     /**
@@ -138,15 +130,39 @@ public class NamasteTerminologyService {
      */
     public List<NamasteCode> getCodesWithTm2Mapping() {
         log.info("Fetching codes with ICD-11 TM2 mapping");
-        return namasteCodeRepository.findByIcd11Tm2CodeIsNotNullAndIsActiveTrue();
+        return namasteCodeRepository.findByTm2CodeIsNotNull();
     }
 
     /**
-     * Get codes that have ICD-11 Biomedicine mapping
+     * Get codes that have ICD-11 Biomedicine mapping - Not supported
      */
     public List<NamasteCode> getCodesWithBiomedicineMapping() {
-        log.info("Fetching codes with ICD-11 Biomedicine mapping");
-        return namasteCodeRepository.findByIcd11BiomedicineCodeIsNotNullAndIsActiveTrue();
+        log.info("Fetching codes with ICD-11 Biomedicine mapping - not supported");
+        return List.of();
+    }
+
+    /**
+     * Get high confidence mappings (>= 0.8)
+     */
+    public List<NamasteCode> getHighConfidenceMappings() {
+        log.info("Fetching high confidence mappings");
+        return namasteCodeRepository.findHighConfidenceMappings();
+    }
+
+    /**
+     * Get medium confidence mappings (0.6 - 0.8)
+     */
+    public List<NamasteCode> getMediumConfidenceMappings() {
+        log.info("Fetching medium confidence mappings");
+        return namasteCodeRepository.findMediumConfidenceMappings();
+    }
+
+    /**
+     * Get low confidence mappings (< 0.6)
+     */
+    public List<NamasteCode> getLowConfidenceMappings() {
+        log.info("Fetching low confidence mappings");
+        return namasteCodeRepository.findLowConfidenceMappings();
     }
 
     /**
@@ -156,33 +172,24 @@ public class NamasteTerminologyService {
         log.info("Generating terminology statistics");
 
         TerminologyStats stats = new TerminologyStats();
-        stats.setTotalCodes(namasteCodeRepository.countByIsActiveTrue());
-        stats.setAyurvedaCodes(namasteCodeRepository.countByNamasteCategoryAndIsActiveTrue("Ayurveda"));
-        stats.setSiddhaCodes(namasteCodeRepository.countByNamasteCategoryAndIsActiveTrue("Siddha"));
-        stats.setUnaniCodes(namasteCodeRepository.countByNamasteCategoryAndIsActiveTrue("Unani"));
-        stats.setDualCodedRecords(namasteCodeRepository.findByIcd11Tm2CodeIsNotNullAndIcd11BiomedicineCodeIsNotNullAndIsActiveTrue().size());
-        stats.setUnmappedRecords(namasteCodeRepository.findUnmappedRecords().size());
+        stats.setTotalCodes(namasteCodeRepository.count());
+        stats.setAyurvedaCodes(namasteCodeRepository.countByType("ayurveda"));
+        stats.setSiddhaCodes(namasteCodeRepository.countByType("siddha"));
+        stats.setUnaniCodes(namasteCodeRepository.countByType("unani"));
+        stats.setDualCodedRecords(0); // Not supported in current structure
+        stats.setUnmappedRecords(0); // All records have TM2 mappings
+        stats.setHighConfidenceMappings(namasteCodeRepository.findHighConfidenceMappings().size());
+        stats.setMediumConfidenceMappings(namasteCodeRepository.findMediumConfidenceMappings().size());
+        stats.setLowConfidenceMappings(namasteCodeRepository.findLowConfidenceMappings().size());
 
         return stats;
     }
 
     /**
-     * Save or update a NAMASTE code record
+     * Save or update a traditional medicine code record
      */
-    @Transactional
     public NamasteCode saveOrUpdate(NamasteCode namasteCode, String userId) {
-        log.info("Saving/updating NAMASTE code: {}", namasteCode.getNamasteCode());
-
-        if (namasteCode.getId() == null) {
-            // New record
-            namasteCode.setCreatedBy(userId);
-            namasteCode.setCreatedAt(LocalDateTime.now());
-        } else {
-            // Update existing record
-            namasteCode.setUpdatedBy(userId);
-            namasteCode.setUpdatedAt(LocalDateTime.now());
-        }
-
+        log.info("Saving/updating traditional medicine code: {}", namasteCode.getCode());
         return namasteCodeRepository.save(namasteCode);
     }
 
@@ -191,13 +198,87 @@ public class NamasteTerminologyService {
      */
     public List<NamasteCode> getRecentlyUpdated(int limit) {
         log.info("Fetching {} recently updated records", limit);
-        // Simple approach - get all active codes sorted by name (since we don't have updatedAt sorting)
-        List<NamasteCode> allCodes = namasteCodeRepository.findByIsActiveTrueOrderByNamasteNameAsc();
+        List<NamasteCode> allCodes = namasteCodeRepository.findAllByOrderByCodeTitleAsc();
         return allCodes.stream().limit(limit).collect(java.util.stream.Collectors.toList());
     }
 
     /**
-     * Statistics class for monitoring and dashboard
+     * Search by code - Main feature 1
+     * Searches in both tm2_code and code fields (EXACT MATCH ONLY)
+     */
+    public List<NamasteCode> searchByCode(String codeValue) {
+        log.info("=== SEARCH BY CODE DEBUG START ===");
+        log.info("Input codeValue: '{}'", codeValue);
+        log.info("Input codeValue length: {}", codeValue != null ? codeValue.length() : "NULL");
+
+        if (codeValue == null || codeValue.trim().isEmpty()) {
+            log.warn("Code value is null or empty, returning empty result");
+            return List.of();
+        }
+
+        String trimmedCode = codeValue.trim();
+        log.info("Trimmed codeValue: '{}'", trimmedCode);
+        log.info("Trimmed codeValue length: {}", trimmedCode.length());
+
+        log.info("Calling repository.findByAnyCode with parameter: '{}'", trimmedCode);
+
+        try {
+            Optional<List<NamasteCode>> result = namasteCodeRepository.findByAnyCode(trimmedCode);
+
+            log.info("Repository call completed");
+
+            if (result.isEmpty() || result.get().isEmpty()) {
+                log.warn("No results found for code: '{}'", trimmedCode);
+                return List.of();
+            }
+
+            List<NamasteCode> results = result.get();
+            log.info("Results found: {}", results.size());
+
+
+            for (int i = 0; i < results.size(); i++) {
+                NamasteCode match = results.get(i);
+                log.info("Match {}: ID={}, tm2_code='{}', code='{}', code_title='{}'",
+                        i + 1, match.getId(), match.getTm2Code(), match.getCode(), match.getCodeTitle());
+            }
+
+            log.info("=== SEARCH BY CODE DEBUG END ===");
+            return results;
+
+        } catch (Exception e) {
+            log.error("Exception occurred while searching for code: '{}'", trimmedCode, e);
+            log.error("Exception type: {}", e.getClass().getSimpleName());
+            log.error("Exception message: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Search by symptoms/description - Main feature 2
+     * Searches in both code_description and tm2_definition fields with fuzzy matching
+     */
+    public List<NamasteCode> searchBySymptoms(String symptomQuery) {
+        log.info("Searching by symptoms/description: {}", symptomQuery);
+
+        if (symptomQuery == null || symptomQuery.trim().length() < 2) {
+            return List.of(); // Return empty list for very short search terms
+        }
+
+        // Escape special regex characters to prevent injection
+        String escapedQuery = escapeRegexSpecialChars(symptomQuery.trim());
+
+        return namasteCodeRepository.findBySymptoms(escapedQuery);
+    }
+
+    /**
+     * Helper method to escape special regex characters
+     */
+    private String escapeRegexSpecialChars(String input) {
+        return input.replaceAll("([\\[\\]\\(\\)\\{\\}\\+\\*\\?\\^\\$\\|\\.])", "\\\\$1");
+    }
+
+    /**
+     * Enhanced Statistics class for monitoring and dashboard
      */
     public static class TerminologyStats {
         private long totalCodes;
@@ -206,6 +287,9 @@ public class NamasteTerminologyService {
         private long unaniCodes;
         private long dualCodedRecords;
         private long unmappedRecords;
+        private long highConfidenceMappings;
+        private long mediumConfidenceMappings;
+        private long lowConfidenceMappings;
 
         // Getters and Setters
         public long getTotalCodes() {
@@ -254,6 +338,30 @@ public class NamasteTerminologyService {
 
         public void setUnmappedRecords(long unmappedRecords) {
             this.unmappedRecords = unmappedRecords;
+        }
+
+        public long getHighConfidenceMappings() {
+            return highConfidenceMappings;
+        }
+
+        public void setHighConfidenceMappings(long highConfidenceMappings) {
+            this.highConfidenceMappings = highConfidenceMappings;
+        }
+
+        public long getMediumConfidenceMappings() {
+            return mediumConfidenceMappings;
+        }
+
+        public void setMediumConfidenceMappings(long mediumConfidenceMappings) {
+            this.mediumConfidenceMappings = mediumConfidenceMappings;
+        }
+
+        public long getLowConfidenceMappings() {
+            return lowConfidenceMappings;
+        }
+
+        public void setLowConfidenceMappings(long lowConfidenceMappings) {
+            this.lowConfidenceMappings = lowConfidenceMappings;
         }
     }
 }

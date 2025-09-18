@@ -4,16 +4,11 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
 
-import java.time.LocalDateTime;
-
-@Document(collection = "namaste_codes")
-@CompoundIndex(name = "namaste_name_idx", def = "{'namasteName': 1}")
-@CompoundIndex(name = "namaste_code_idx", def = "{'namasteCode': 1}")
-@CompoundIndex(name = "icd11_tm2_code_idx", def = "{'icd11Tm2Code': 1}")
+@Document(collection = "tm2_mappings")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -22,93 +17,113 @@ public class NamasteCode {
     @Id
     private String id;
 
-    // NAMASTE Fields
-    @Indexed(unique = true)
-    private String namasteCode;
-
+    @Field("tm2_code")
     @Indexed
-    private String namasteName;
+    private String tm2Code;
 
-    private String namasteDescription;
+    @Field("tm2_link")
+    private String tm2Link;
 
-    private String namasteCategory; // Ayurveda, Siddha, Unani
-
-    private String namasteSubCategory;
-
-    // WHO International Terminologies for Ayurveda
-    private String whoAyurvedaCode;
-
-    private String whoAyurvedaName;
-
-    private String whoAyurvedaDescription;
-
-    // ICD-11 TM2 (Traditional Medicine Module 2) Fields
+    @Field("code")
     @Indexed
-    private String icd11Tm2Code;
+    private String code;
 
-    private String icd11Tm2Name;
+    @Field("tm2_title")
+    @Indexed
+    private String tm2Title;
 
-    private String icd11Tm2Description;
+    @Field("tm2_definition")
+    private String tm2Definition;
 
-    private String icd11Tm2Uri;
+    @Field("code_title")
+    @Indexed
+    private String codeTitle;
 
-    // ICD-11 Biomedicine Fields (for dual coding)
-    private String icd11BiomedicineCode;
+    @Field("code_description")
+    private String codeDescription;
 
-    private String icd11BiomedicineName;
+    @Field("confidence_score")
+    private Double confidenceScore;
 
-    private String icd11BiomedicineDescription;
+    @Field("type")
+    @Indexed
+    private String type;
 
-    private String icd11BiomedicineUri;
-
-    // Mapping Metadata
-    private String mappingConfidence; // HIGH, MEDIUM, LOW
-
-    private String mappingType; // EXACT, PARTIAL, BROAD, NARROW
-
-    private String mappingNotes;
-
-    private String mappedBy; // WHO mapped it or system mapped
-
-    // Version and Audit Fields
-    private String namasteVersion = "1.0.0";
-
-    private String icd11Version = "2024-01";
-
-    private boolean isActive = true;
-
-    private LocalDateTime createdAt = LocalDateTime.now();
-
-    private LocalDateTime updatedAt = LocalDateTime.now();
-
-    private String createdBy;
-
-    private String updatedBy;
-
-    public void preUpdate() {
-        this.updatedAt = LocalDateTime.now();
+    // Helper methods for backward compatibility with FHIR service
+    public String getNamasteCode() {
+        return this.code;
     }
 
-    // Helper method to get display name for UI
+    public String getNamasteName() {
+        return this.codeTitle;
+    }
+
+    public String getNamasteDescription() {
+        return this.codeDescription;
+    }
+
+    public String getNamasteCategory() {
+        return this.type;
+    }
+
+    public String getIcd11Tm2Code() {
+        return this.tm2Code;
+    }
+
+    public String getIcd11Tm2Name() {
+        return this.tm2Title;
+    }
+
+    public String getIcd11Tm2Description() {
+        return this.tm2Definition;
+    }
+
+    public String getIcd11Tm2Uri() {
+        return this.tm2Link;
+    }
+
+    // For dual coding support - these fields are not in your current document
+    // but keeping for FHIR compatibility
+    public String getIcd11BiomedicineCode() {
+        return null; // Not available in current document structure
+    }
+
+    public String getIcd11BiomedicineName() {
+        return null; // Not available in current document structure
+    }
+
+    public String getIcd11BiomedicineDescription() {
+        return null; // Not available in current document structure
+    }
+
+    public String getIcd11BiomedicineUri() {
+        return null; // Not available in current document structure
+    }
+
+    // Helper methods
     public String getDisplayName() {
-        return namasteName + " (" + namasteCode + ")";
+        return codeTitle + " (" + code + ")";
     }
 
-    // Helper method to check if dual coding is available
     public boolean hasDualCoding() {
-        return icd11Tm2Code != null && icd11BiomedicineCode != null;
+        return false; // Not supported with current document structure
     }
 
-    // Helper method to get all ICD-11 codes as a combined string
     public String getAllIcd11Codes() {
-        StringBuilder sb = new StringBuilder();
-        if (icd11Tm2Code != null) {
-            sb.append("TM2: ").append(icd11Tm2Code);
+        return tm2Code != null ? "TM2: " + tm2Code : "";
+    }
+
+    public String getMappingConfidence() {
+        if (confidenceScore != null) {
+            if (confidenceScore >= 0.8) return "HIGH";
+            if (confidenceScore >= 0.6) return "MEDIUM";
+            return "LOW";
         }
-        if (icd11BiomedicineCode != null) {
-            if (sb.length() > 0) sb.append(" | ");
-            sb.append("Biomedicine: ").append(icd11BiomedicineCode);
-        }
-        return sb.toString();
+        return "UNKNOWN";
+    }
+
+    // For FHIR compatibility
+    public boolean isActive() {
+        return true; // Assuming all records in collection are active
     }
 }

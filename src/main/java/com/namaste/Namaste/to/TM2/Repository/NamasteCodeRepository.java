@@ -6,62 +6,80 @@ import org.springframework.data.mongodb.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import javax.swing.text.html.Option;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface NamasteCodeRepository extends MongoRepository<NamasteCode, String> {
 
-    // Find by NAMASTE code
-    Optional<NamasteCode> findByNamasteCode(String namasteCode);
+    /**
+     * Search by code - checks both tm2_code and code fields (EXACT MATCH ONLY)
+     * This is one of the two main search features requested
+     */
+    @Query("{'$or': [" +
+            "{'tm2_code': ?0}, " +
+            "{'code': ?0}" +
+            "]}")
+    Optional<List<NamasteCode>> findByAnyCode(@Param("codeValue") String codeValue);
 
-    // Find by NAMASTE name (exact match)
-    Optional<NamasteCode> findByNamasteName(String namasteName);
+    /**
+     * Search by symptoms/description - checks both code_description and tm2_definition fields
+     * Uses case-insensitive regex matching for fuzzy search
+     * This is the second main search feature requested
+     */
+    @Query("{'$or': [" +
+            "{'code_description': {$regex: ?0, $options: 'i'}}, " +
+            "{'tm2_definition': {$regex: ?0, $options: 'i'}}" +
+            "]}")
+    List<NamasteCode> findBySymptoms(@Param("symptomQuery") String symptomQuery);
+
+    // Find by traditional medicine code (formerly NAMASTE code)
+    Optional<NamasteCode> findByCode(String code);
+
+    // Find by traditional medicine name (code_title)
+    Optional<NamasteCode> findByCodeTitle(String codeTitle);
 
     // Auto-complete search (case-insensitive, contains)
-    @Query("{'namasteName': {$regex: ?0, $options: 'i'}, 'isActive': true}")
-    List<NamasteCode> findByNamasteNameContainingIgnoreCase(@Param("query") String query);
+    @Query("{'code_title': {$regex: ?0, $options: 'i'}}")
+    List<NamasteCode> findByCodeTitleContainingIgnoreCase(@Param("query") String query);
 
-    // Find by category
-    List<NamasteCode> findByNamasteCategoryAndIsActiveTrue(String category);
+    // Find by type (category - ayurveda, siddha, unani, etc.)
+    List<NamasteCode> findByType(String type);
 
-    // Find by ICD-11 TM2 code (reverse lookup)
-    Optional<NamasteCode> findByIcd11Tm2Code(String icd11Tm2Code);
+    // Find by TM2 code (reverse lookup)
+    Optional<NamasteCode> findByTm2Code(String tm2Code);
 
-    // Find by ICD-11 Biomedicine code (reverse lookup) 
-    Optional<NamasteCode> findByIcd11BiomedicineCode(String icd11BiomedicineCode);
+    // Count by type (category)
+    long countByType(String type);
 
-    // Count by category
-    long countByNamasteCategoryAndIsActiveTrue(String category);
+    // Count total records
+    long count();
 
-    // Count total active records
-    long countByIsActiveTrue();
+    // Get all codes ordered by code_title
+    List<NamasteCode> findAllByOrderByCodeTitleAsc();
 
-    // Count records with dual coding
-    @Query(value = "{'icd11Tm2Code': {$ne: null}, 'icd11BiomedicineCode': {$ne: null}, 'isActive': true}", count = true)
-    long countDualCodedRecords();
-
-    // Get all active codes ordered by name
-    List<NamasteCode> findByIsActiveTrueOrderByNamasteNameAsc();
-
-    // Get codes with ICD-11 TM2 mapping
-    List<NamasteCode> findByIcd11Tm2CodeIsNotNullAndIsActiveTrue();
-
-    // Get codes with ICD-11 Biomedicine mapping
-    List<NamasteCode> findByIcd11BiomedicineCodeIsNotNullAndIsActiveTrue();
-
-    // Get codes with both TM2 and Biomedicine mapping (dual coding)
-    List<NamasteCode> findByIcd11Tm2CodeIsNotNullAndIcd11BiomedicineCodeIsNotNullAndIsActiveTrue();
-
-    // Find unmapped records (missing ICD-11 mappings)
-    @Query("{'$or': [{'icd11Tm2Code': null}, {'icd11BiomedicineCode': null}], 'isActive': true}")
-    List<NamasteCode> findUnmappedRecords();
+    // Get codes with TM2 mapping
+    List<NamasteCode> findByTm2CodeIsNotNull();
 
     // Advanced search across multiple fields
     @Query("{'$or': [" +
-            "{'namasteName': {$regex: ?0, $options: 'i'}}, " +
-            "{'namasteDescription': {$regex: ?0, $options: 'i'}}, " +
-            "{'namasteCode': {$regex: ?0, $options: 'i'}}" +
-            "], 'isActive': true}")
+            "{'code_title': {$regex: ?0, $options: 'i'}}, " +
+            "{'code_description': {$regex: ?0, $options: 'i'}}, " +
+            "{'code': {$regex: ?0, $options: 'i'}}, " +
+            "{'tm2_title': {$regex: ?0, $options: 'i'}}" +
+            "]}")
     List<NamasteCode> findByAdvancedSearch(@Param("query") String query);
+
+    // Find high confidence mappings (>= 0.8)
+    @Query("{'confidence_score': {$gte: 0.8}}")
+    List<NamasteCode> findHighConfidenceMappings();
+
+    // Find medium confidence mappings (0.6 - 0.8)
+    @Query("{'confidence_score': {$gte: 0.6, $lt: 0.8}}")
+    List<NamasteCode> findMediumConfidenceMappings();
+
+    // Find low confidence mappings (< 0.6)
+    @Query("{'confidence_score': {$lt: 0.6}}")
+    List<NamasteCode> findLowConfidenceMappings();
 }
