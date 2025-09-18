@@ -235,15 +235,21 @@ public class NamasteTerminologyService {
             List<NamasteCode> results = result.get();
             log.info("Results found: {}", results.size());
 
+            // Filter results to only include codes with confidence score > 0.6
+            List<NamasteCode> filteredResults = results.stream()
+                    .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
+                    .collect(java.util.stream.Collectors.toList());
 
-            for (int i = 0; i < results.size(); i++) {
-                NamasteCode match = results.get(i);
-                log.info("Match {}: ID={}, tm2_code='{}', code='{}', code_title='{}'",
-                        i + 1, match.getId(), match.getTm2Code(), match.getCode(), match.getCodeTitle());
+            log.info("Results after confidence filter (>0.6): {}", filteredResults.size());
+
+            for (int i = 0; i < filteredResults.size(); i++) {
+                NamasteCode match = filteredResults.get(i);
+                log.info("Match {}: ID={}, tm2_code='{}', code='{}', code_title='{}', confidence={}",
+                        i + 1, match.getId(), match.getTm2Code(), match.getCode(), match.getCodeTitle(), match.getConfidenceScore());
             }
 
             log.info("=== SEARCH BY CODE DEBUG END ===");
-            return results;
+            return filteredResults;
 
         } catch (Exception e) {
             log.error("Exception occurred while searching for code: '{}'", trimmedCode, e);
