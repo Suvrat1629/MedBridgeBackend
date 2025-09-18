@@ -66,7 +66,7 @@ public class TerminologyFhirService {
 
             // Create a parameter group for each match
             Parameters.ParametersParameterComponent matchGroup = new Parameters.ParametersParameterComponent();
-            matchGroup.setName("match" + (i + 1));
+            matchGroup.setName("match");
 
             // Add found code details
             Parameters.ParametersParameterComponent codeParam = new Parameters.ParametersParameterComponent();
@@ -75,6 +75,9 @@ public class TerminologyFhirService {
             codeParam.addPart().setName("code").setValue(new CodeType(namasteCode.getNamasteCode()));
             codeParam.addPart().setName("display").setValue(new StringType(namasteCode.getNamasteName()));
             matchGroup.addPart(codeParam);
+
+            // Add type parameter
+            matchGroup.addPart().setName("type").setValue(new StringType(namasteCode.getNamasteCategory()));
 
             // Add TM2 mapping if available
             if (namasteCode.getIcd11Tm2Code() != null) {
@@ -96,8 +99,6 @@ public class TerminologyFhirService {
             if (namasteCode.getConfidenceScore() != null) {
                 matchGroup.addPart().setName("confidenceScore").setValue(new DecimalType(namasteCode.getConfidenceScore()));
             }
-
-            matchGroup.addPart().setName("type").setValue(new StringType(namasteCode.getNamasteCategory()));
 
             parameters.addParameter(matchGroup);
         }
