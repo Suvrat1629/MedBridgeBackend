@@ -235,9 +235,10 @@ public class NamasteTerminologyService {
             List<NamasteCode> results = result.get();
             log.info("Results found: {}", results.size());
 
-            // Filter results to only include codes with confidence score > 0.6
+            // Filter results to only include codes with confidence score > 0.6 and limit to 6
             List<NamasteCode> filteredResults = results.stream()
                     .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
+                    .limit(6)  // Take only first 6 (already sorted by confidence in query)
                     .collect(java.util.stream.Collectors.toList());
 
             log.info("Results after confidence filter (>0.6): {}", filteredResults.size());
@@ -255,6 +256,92 @@ public class NamasteTerminologyService {
             log.error("Exception occurred while searching for code: '{}'", trimmedCode, e);
             log.error("Exception type: {}", e.getClass().getSimpleName());
             log.error("Exception message: {}", e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * Search by TM2 code only
+     * Searches only in tm2_code field (EXACT MATCH ONLY)
+     */
+    public List<NamasteCode> searchByTm2CodeOnly(String codeValue) {
+        log.info("=== SEARCH BY TM2 CODE ONLY DEBUG START ===");
+        log.info("Input codeValue: '{}'", codeValue);
+
+        if (codeValue == null || codeValue.trim().isEmpty()) {
+            log.warn("Code value is null or empty, returning empty result");
+            return List.of();
+        }
+
+        String trimmedCode = codeValue.trim();
+        log.info("Calling repository.findByTm2CodeOnly with parameter: '{}'", trimmedCode);
+
+        try {
+            Optional<List<NamasteCode>> result = namasteCodeRepository.findByTm2CodeOnly(trimmedCode);
+
+            if (result.isEmpty() || result.get().isEmpty()) {
+                log.warn("No results found for TM2 code: '{}'", trimmedCode);
+                return List.of();
+            }
+
+            List<NamasteCode> results = result.get();
+            log.info("Results found: {}", results.size());
+
+            // Filter results to only include codes with confidence score > 0.6 and limit to 6
+            List<NamasteCode> filteredResults = results.stream()
+                    .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
+                    .limit(6)
+                    .collect(java.util.stream.Collectors.toList());
+
+            log.info("Results after confidence filter (>0.6): {}", filteredResults.size());
+            log.info("=== SEARCH BY TM2 CODE ONLY DEBUG END ===");
+            return filteredResults;
+
+        } catch (Exception e) {
+            log.error("Exception occurred while searching for TM2 code: '{}'", trimmedCode, e);
+            throw e;
+        }
+    }
+
+    /**
+     * Search by code only
+     * Searches only in code field (EXACT MATCH ONLY)
+     */
+    public List<NamasteCode> searchByCodeOnly(String codeValue) {
+        log.info("=== SEARCH BY CODE ONLY DEBUG START ===");
+        log.info("Input codeValue: '{}'", codeValue);
+
+        if (codeValue == null || codeValue.trim().isEmpty()) {
+            log.warn("Code value is null or empty, returning empty result");
+            return List.of();
+        }
+
+        String trimmedCode = codeValue.trim();
+        log.info("Calling repository.findByCodeOnly with parameter: '{}'", trimmedCode);
+
+        try {
+            Optional<List<NamasteCode>> result = namasteCodeRepository.findByCodeOnly(trimmedCode);
+
+            if (result.isEmpty() || result.get().isEmpty()) {
+                log.warn("No results found for code: '{}'", trimmedCode);
+                return List.of();
+            }
+
+            List<NamasteCode> results = result.get();
+            log.info("Results found: {}", results.size());
+
+            // Filter results to only include codes with confidence score > 0.6 and limit to 6
+            List<NamasteCode> filteredResults = results.stream()
+                    .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
+                    .limit(6)
+                    .collect(java.util.stream.Collectors.toList());
+
+            log.info("Results after confidence filter (>0.6): {}", filteredResults.size());
+            log.info("=== SEARCH BY CODE ONLY DEBUG END ===");
+            return filteredResults;
+
+        } catch (Exception e) {
+            log.error("Exception occurred while searching for code: '{}'", trimmedCode, e);
             throw e;
         }
     }

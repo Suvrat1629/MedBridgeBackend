@@ -50,6 +50,44 @@ public class FhirBundleController {
     }
 
     /**
+     * FHIR-COMPLIANT Search by TM2 Code Only
+     * Searches only in tm2_code field, returns FHIR Parameters
+     */
+    @GetMapping(value = "/search/tm2code/{codeValue}", produces = FHIR_JSON_CONTENT_TYPE)
+    public ResponseEntity<String> searchByTm2Code(@PathVariable String codeValue) {
+        log.info("FHIR search by TM2 code: {}", codeValue);
+
+        try {
+            Parameters parameters = terminologyFhirService.createSearchByTm2CodeResult(codeValue);
+            addFhirMetadata(parameters);
+            String fhirJson = terminologyFhirService.toJson(parameters);
+            return createFhirResponse(fhirJson);
+        } catch (Exception e) {
+            log.error("Error in FHIR TM2 code search", e);
+            return createFhirErrorResponse("TM2 code search failed", e.getMessage());
+        }
+    }
+
+    /**
+     * FHIR-COMPLIANT Search by Code Only
+     * Searches only in code field, returns FHIR Parameters
+     */
+    @GetMapping(value = "/search/codeonly/{codeValue}", produces = FHIR_JSON_CONTENT_TYPE)
+    public ResponseEntity<String> searchByCodeOnly(@PathVariable String codeValue) {
+        log.info("FHIR search by code only: {}", codeValue);
+
+        try {
+            Parameters parameters = terminologyFhirService.createSearchByCodeOnlyResult(codeValue);
+            addFhirMetadata(parameters);
+            String fhirJson = terminologyFhirService.toJson(parameters);
+            return createFhirResponse(fhirJson);
+        } catch (Exception e) {
+            log.error("Error in FHIR code only search", e);
+            return createFhirErrorResponse("Code only search failed", e.getMessage());
+        }
+    }
+
+    /**
      * MAIN FEATURE 2: FHIR-COMPLIANT Search by Symptoms
      * Searches in both code_description and tm2_definition fields, returns FHIR Bundle
      */

@@ -107,6 +107,144 @@ public class TerminologyFhirService {
     }
 
     /**
+     * Create FHIR Parameters for search by TM2 code only result
+     */
+    public Parameters createSearchByTm2CodeResult(String codeValue) {
+        log.info("Creating FHIR Parameters for TM2 code search: {}", codeValue);
+
+        Parameters parameters = new Parameters();
+        parameters.setId("search-by-tm2code-result-" + codeValue);
+
+        // Search using the terminology service
+        List<NamasteCode> result = terminologyService.searchByTm2CodeOnly(codeValue);
+
+        if (result.isEmpty()) {
+            // Result parameter (false = not found)
+            parameters.addParameter("result", new BooleanType(false));
+            parameters.addParameter("message", new StringType("No TM2 code found matching: " + codeValue));
+            return parameters;
+        }
+
+        // Result parameter (true = found)
+        parameters.addParameter("result", new BooleanType(true));
+        parameters.addParameter("totalMatches", new IntegerType(result.size()));
+
+        // Process all found codes
+        for (int i = 0; i < result.size(); i++) {
+            NamasteCode namasteCode = result.get(i);
+
+            // Create a parameter group for each match
+            Parameters.ParametersParameterComponent matchGroup = new Parameters.ParametersParameterComponent();
+            matchGroup.setName("match");
+
+            // Add found code details
+            Parameters.ParametersParameterComponent codeParam = new Parameters.ParametersParameterComponent();
+            codeParam.setName("code");
+            codeParam.addPart().setName("system").setValue(new UriType("http://terminology.hl7.org.in/CodeSystem/namaste"));
+            codeParam.addPart().setName("code").setValue(new CodeType(namasteCode.getNamasteCode()));
+            codeParam.addPart().setName("display").setValue(new StringType(namasteCode.getNamasteName()));
+            matchGroup.addPart(codeParam);
+
+            // Add type parameter
+            matchGroup.addPart().setName("type").setValue(new StringType(namasteCode.getNamasteCategory()));
+
+            // Add TM2 mapping if available
+            if (namasteCode.getIcd11Tm2Code() != null) {
+                Parameters.ParametersParameterComponent tm2Param = new Parameters.ParametersParameterComponent();
+                tm2Param.setName("tm2Mapping");
+                tm2Param.addPart().setName("system").setValue(new UriType("http://id.who.int/icd/release/11/tm2"));
+                tm2Param.addPart().setName("code").setValue(new CodeType(namasteCode.getIcd11Tm2Code()));
+                tm2Param.addPart().setName("display").setValue(new StringType(namasteCode.getIcd11Tm2Name()));
+                tm2Param.addPart().setName("definition").setValue(new StringType(namasteCode.getIcd11Tm2Description()));
+                tm2Param.addPart().setName("link").setValue(new UriType(namasteCode.getIcd11Tm2Uri()));
+                matchGroup.addPart(tm2Param);
+            }
+
+            // Add code description and confidence
+            if (namasteCode.getNamasteDescription() != null) {
+                matchGroup.addPart().setName("description").setValue(new StringType(namasteCode.getNamasteDescription()));
+            }
+
+            if (namasteCode.getConfidenceScore() != null) {
+                matchGroup.addPart().setName("confidenceScore").setValue(new DecimalType(namasteCode.getConfidenceScore()));
+            }
+
+            parameters.addParameter(matchGroup);
+        }
+
+        return parameters;
+    }
+
+    /**
+     * Create FHIR Parameters for search by code only result
+     */
+    public Parameters createSearchByCodeOnlyResult(String codeValue) {
+        log.info("Creating FHIR Parameters for code only search: {}", codeValue);
+
+        Parameters parameters = new Parameters();
+        parameters.setId("search-by-codeonly-result-" + codeValue);
+
+        // Search using the terminology service
+        List<NamasteCode> result = terminologyService.searchByCodeOnly(codeValue);
+
+        if (result.isEmpty()) {
+            // Result parameter (false = not found)
+            parameters.addParameter("result", new BooleanType(false));
+            parameters.addParameter("message", new StringType("No code found matching: " + codeValue));
+            return parameters;
+        }
+
+        // Result parameter (true = found)
+        parameters.addParameter("result", new BooleanType(true));
+        parameters.addParameter("totalMatches", new IntegerType(result.size()));
+
+        // Process all found codes
+        for (int i = 0; i < result.size(); i++) {
+            NamasteCode namasteCode = result.get(i);
+
+            // Create a parameter group for each match
+            Parameters.ParametersParameterComponent matchGroup = new Parameters.ParametersParameterComponent();
+            matchGroup.setName("match");
+
+            // Add found code details
+            Parameters.ParametersParameterComponent codeParam = new Parameters.ParametersParameterComponent();
+            codeParam.setName("code");
+            codeParam.addPart().setName("system").setValue(new UriType("http://terminology.hl7.org.in/CodeSystem/namaste"));
+            codeParam.addPart().setName("code").setValue(new CodeType(namasteCode.getNamasteCode()));
+            codeParam.addPart().setName("display").setValue(new StringType(namasteCode.getNamasteName()));
+            matchGroup.addPart(codeParam);
+
+            // Add type parameter
+            matchGroup.addPart().setName("type").setValue(new StringType(namasteCode.getNamasteCategory()));
+
+            // Add TM2 mapping if available
+            if (namasteCode.getIcd11Tm2Code() != null) {
+                Parameters.ParametersParameterComponent tm2Param = new Parameters.ParametersParameterComponent();
+                tm2Param.setName("tm2Mapping");
+                tm2Param.addPart().setName("system").setValue(new UriType("http://id.who.int/icd/release/11/tm2"));
+                tm2Param.addPart().setName("code").setValue(new CodeType(namasteCode.getIcd11Tm2Code()));
+                tm2Param.addPart().setName("display").setValue(new StringType(namasteCode.getIcd11Tm2Name()));
+                tm2Param.addPart().setName("definition").setValue(new StringType(namasteCode.getIcd11Tm2Description()));
+                tm2Param.addPart().setName("link").setValue(new UriType(namasteCode.getIcd11Tm2Uri()));
+                matchGroup.addPart(tm2Param);
+            }
+
+            // Add code description and confidence
+            if (namasteCode.getNamasteDescription() != null) {
+                matchGroup.addPart().setName("description").setValue(new StringType(namasteCode.getNamasteDescription()));
+            }
+
+            if (namasteCode.getConfidenceScore() != null) {
+                matchGroup.addPart().setName("confidenceScore").setValue(new DecimalType(namasteCode.getConfidenceScore()));
+            }
+
+            parameters.addParameter(matchGroup);
+        }
+
+        return parameters;
+    }
+
+    /**
      * Create FHIR Bundle for search by symptoms result - MAIN FEATURE 2
      */
     public Bundle createSearchBySymptomsResult(String symptomQuery) {

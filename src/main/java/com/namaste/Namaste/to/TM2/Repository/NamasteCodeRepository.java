@@ -17,11 +17,25 @@ public interface NamasteCodeRepository extends MongoRepository<NamasteCode, Stri
      * Search by code - checks both tm2_code and code fields (EXACT MATCH ONLY)
      * This is one of the two main search features requested
      */
-    @Query("{'$or': [" +
+    @Query(value = "{'$or': [" +
             "{'tm2_code': ?0}, " +
             "{'code': ?0}" +
-            "]}")
+            "]}", sort = "{'confidence_score': -1}")
     Optional<List<NamasteCode>> findByAnyCode(@Param("codeValue") String codeValue);
+
+    /**
+     * Search only in tm2_code field (EXACT MATCH ONLY)
+     * Returns top 6 results sorted by confidence score (highest first)
+     */
+    @Query(value = "{'tm2_code': ?0}", sort = "{'confidence_score': -1}")
+    Optional<List<NamasteCode>> findByTm2CodeOnly(@Param("codeValue") String codeValue);
+
+    /**
+     * Search only in code field (EXACT MATCH ONLY)
+     * Returns top 6 results sorted by confidence score (highest first)
+     */
+    @Query(value = "{'code': ?0}", sort = "{'confidence_score': -1}")
+    Optional<List<NamasteCode>> findByCodeOnly(@Param("codeValue") String codeValue);
 
     /**
      * Search by symptoms/description - checks both code_description and tm2_definition fields
