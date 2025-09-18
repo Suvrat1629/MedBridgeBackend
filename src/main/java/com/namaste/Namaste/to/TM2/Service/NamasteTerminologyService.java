@@ -7,6 +7,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
 
@@ -223,6 +225,9 @@ public class NamasteTerminologyService {
         log.info("Calling repository.findByAnyCode with parameter: '{}'", trimmedCode);
 
         try {
+            Optional<NamasteCode> tm2docu = namasteCodeRepository.findTopByCodeOrderByConfidenceScoreDesc(trimmedCode);
+            if(tm2docu.isPresent())
+                trimmedCode = tm2docu.get().getTm2Code().trim();
             Optional<List<NamasteCode>> result = namasteCodeRepository.findByAnyCode(trimmedCode);
 
             log.info("Repository call completed");
@@ -238,9 +243,17 @@ public class NamasteTerminologyService {
             // Filter results to only include codes with confidence score > 0.6 and limit to 6
             List<NamasteCode> filteredResults = results.stream()
                     .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
-                    .limit(6)  // Take only first 6 (already sorted by confidence in query)
                     .collect(java.util.stream.Collectors.toList());
-
+            HashMap<String,NamasteCode> finalCodes = new HashMap<>();
+            for(NamasteCode code : filteredResults){
+                if(!finalCodes.containsKey(code.getType()))
+                    finalCodes.put(code.getType(),code);
+                else {
+                    if(finalCodes.get(code.getType()).getConfidenceScore()<code.getConfidenceScore())
+                        finalCodes.put(code.getType(),code);
+                }
+            }
+            filteredResults = new ArrayList<>(finalCodes.values());
             log.info("Results after confidence filter (>0.6): {}", filteredResults.size());
 
             for (int i = 0; i < filteredResults.size(); i++) {

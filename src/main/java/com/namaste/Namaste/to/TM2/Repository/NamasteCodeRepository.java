@@ -96,4 +96,11 @@ public interface NamasteCodeRepository extends MongoRepository<NamasteCode, Stri
     // Find low confidence mappings (< 0.6)
     @Query("{'confidence_score': {$lt: 0.6}}")
     List<NamasteCode> findLowConfidenceMappings();
+
+    /**
+     * Find TM2 code with maximum confidence level by searching in code field
+     * Returns single result with highest confidence score
+     */
+    Optional<NamasteCode> findTopByCodeOrderByConfidenceScoreDesc(String code);
+
 }
