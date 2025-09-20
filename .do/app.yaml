@@ -8,7 +8,7 @@ services:
       registry_type: DOCKER_HUB
       registry: docker.io
       repository: suvrat1629/namaste-web
-      registry_credentials: "suvrat1629/PLACEHOLDER_DOCKERHUB_PASSWORD"
+      registry_credentials: "suvrat1629:PLACEHOLDER_DOCKERHUB_PASSWORD"
       digest: sha256:99312fc8bbf033530dc0c3a332e961bb500ed696407975da4898a319dc0bd5c5
       
     
