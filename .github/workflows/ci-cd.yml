@@ -1,88 +1,71 @@
-name: CI/CD Pipeline
+name: Build, Push and Deploy a Docker Image
 
 on:
   push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 
-env:
-  REGISTRY: docker.io
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  build:
-    name: Build and Push Docker Image
+  build-push-deploy:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
     
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v3
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3.3.0
       with:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-    
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=ref,event=pr
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+        registry: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
     
     - name: Build and push Docker image
-      uses: docker/build-push-action@v5
+      id: push
+      uses: docker/build-push-action@v6.5.0
       with:
         context: .
         push: true
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-
-  deploy:
-    name: Deploy to DigitalOcean
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        tags: ghcr.io/${{ github.repository }}:latest
     
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - name: Update app spec with GitHub Container Registry image
+      run: |
+        echo "Before replacement:"
+        cat .do/app.yaml | grep -A 10 "image:"
+        
+        # Convert repository name to lowercase (GHCR requirement)
+        REPO_LOWERCASE=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+        echo "Using image: ghcr.io/$REPO_LOWERCASE:latest"
+        
+        # Update image repository for GitHub Container Registry
+        sed -i 's|PLACEHOLDER_IMAGE_NAME|ghcr.io/'$REPO_LOWERCASE'|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_REGISTRY_TYPE|DOCKER_HUB|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_REGISTRY|ghcr.io|g' .do/app.yaml
+        
+        echo "After replacement:"
+        cat .do/app.yaml | grep -A 10 "image:"
+        
+        # Verify the replacement worked
+        if grep -q "PLACEHOLDER_" .do/app.yaml; then
+          echo "❌ ERROR: Some placeholders were not replaced!"
+          cat .do/app.yaml | grep "PLACEHOLDER_"
+          exit 1
+        else
+          echo "✅ All placeholders successfully replaced"
+        fi
     
     - name: Install doctl
       uses: digitalocean/action-doctl@v2
       with:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
     
-    - name: Update app spec with new image and credentials
-      run: |
-        # Create base64 encoded credentials for DigitalOcean
-        DOCKER_CREDS=$(echo -n "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" | base64 -w 0)
-        
-        # Update image repository and credentials
-        sed -i 's|PLACEHOLDER_IMAGE_NAME|${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
-        sed -i 's|\$your_username:\$access_token|'$DOCKER_CREDS'|g' .do/app.yaml
-    
-    - name: Verify Docker image exists
-      run: |
-        echo "Verifying Docker image exists on Docker Hub..."
-        docker pull ${{ secrets.DOCKER_IMAGE_NAME }}:latest
-        echo "✅ Image verified and accessible"
-    
     - name: Deploy to DigitalOcean App Platform
       run: |
-        echo "Deploying with image: ${{ secrets.DOCKER_IMAGE_NAME }}:latest"
+        echo "Deploying with image: ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]'):latest"
         echo "Final app.yaml image configuration:"
         cat .do/app.yaml | grep -A 10 "image:"
         
