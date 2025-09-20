@@ -1,0 +1,125 @@
+name: traditional-medicine-app
+region: nyc1
+
+services:
+- name: traditional-medicine-backend
+  source_dir: /
+  github:
+    repo: YOUR_GITHUB_USERNAME/YOUR_REPO_NAME
+    branch: main
+    deploy_on_push: true
+  
+  # Use Docker image instead of buildpack
+  image:
+    registry_type: DOCKER_HUB
+    registry: docker.io
+    repository: YOUR_DOCKER_USERNAME/YOUR_REPO_NAME
+    tag: latest
+  
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  
+  http_port: 8082
+  
+  health_check:
+    http_path: /actuator/health
+    initial_delay_seconds: 60
+    period_seconds: 30
+    timeout_seconds: 5
+    success_threshold: 1
+    failure_threshold: 3
+  
+  # Environment variables (secrets)
+  envs:
+  - key: SPRING_DATA_MONGODB_URI
+    scope: RUN_TIME
+    type: SECRET
+    value: mongodb+srv://ramakanta:ramakanta@cluster0.qamg2kd.mongodb.net/traditional_medicine_db
+  
+  - key: ABHA_BASE_URL
+    scope: RUN_TIME
+    value: https://sandbox.abdm.gov.in
+  
+  - key: ABHA_CLIENT_ID
+    scope: RUN_TIME
+    type: SECRET
+    value: your_client_id
+  
+  - key: ABHA_CLIENT_SECRET
+    scope: RUN_TIME
+    type: SECRET
+    value: your_client_secret
+  
+  - key: ABHA_X_HIP_ID
+    scope: RUN_TIME
+    type: SECRET
+    value: your_hip_id
+  
+  - key: ABHA_AUTH_TOKEN
+    scope: RUN_TIME
+    type: SECRET
+    value: your_auth_token
+  
+  - key: ABHA_OTP_VALIDITY_MINUTES
+    scope: RUN_TIME
+    value: "10"
+  
+  - key: ABHA_MAX_RETRY_ATTEMPTS
+    scope: RUN_TIME
+    value: "3"
+  
+  - key: ABHA_CONNECTION_TIMEOUT_SECONDS
+    scope: RUN_TIME
+    value: "30"
+  
+  - key: ABHA_READ_TIMEOUT_SECONDS
+    scope: RUN_TIME
+    value: "60"
+  
+  - key: FHIR_TERMINOLOGY_VERSION
+    scope: RUN_TIME
+    value: "1.0.0"
+  
+  - key: FHIR_CODESYSTEM_COUNT
+    scope: RUN_TIME
+    value: "4500"
+  
+  - key: APP_SECURITY_TERMINOLOGY_PUBLIC
+    scope: RUN_TIME
+    value: "true"
+  
+  - key: SPRING_SECURITY_USER_NAME
+    scope: RUN_TIME
+    type: SECRET
+    value: admin
+  
+  - key: SPRING_SECURITY_USER_PASSWORD
+    scope: RUN_TIME
+    type: SECRET
+    value: password
+  
+  - key: SPRING_SECURITY_USER_ROLES
+    scope: RUN_TIME
+    value: USER
+  
+  - key: LOGGING_LEVEL_COM_NAMASTE_NAMASTE_TO_TM2
+    scope: RUN_TIME
+    value: DEBUG
+  
+  - key: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB_REACTIVE_FUNCTION_CLIENT
+    scope: RUN_TIME
+    value: DEBUG
+  
+  - key: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
+    scope: RUN_TIME
+    value: DEBUG
+  
+  - key: SERVER_PORT
+    scope: RUN_TIME
+    value: "8082"
+
+# Optional: Add a database if needed
+# databases:
+# - name: traditional-medicine-db
+#   engine: MONGODB
+#   version: "5"
