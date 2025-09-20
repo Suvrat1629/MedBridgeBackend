@@ -7,7 +7,7 @@ services:
     image:
       registry_type: DOCKER_HUB
       registry: docker.io
-      repository: suvrat1629/namaste-web
+      repository: PLACEHOLDER_IMAGE_NAME
       tag: latest
       registry_credentials: "$your_username:$access_token"
     
