@@ -68,11 +68,20 @@ jobs:
     - name: Update app spec with new image and credentials
       run: |
         # Update image repository and credentials
-        sed -i 's|suvrat1629/namaste-web|${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_IMAGE_NAME|${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
         sed -i 's|\$your_username:\$access_token|${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}|g' .do/app.yaml
+    
+    - name: Verify Docker image exists
+      run: |
+        echo "Verifying Docker image exists on Docker Hub..."
+        docker pull ${{ secrets.DOCKER_IMAGE_NAME }}:latest
+        echo "✅ Image verified and accessible"
     
     - name: Deploy to DigitalOcean App Platform
       run: |
+        echo "Deploying with image: ${{ secrets.DOCKER_IMAGE_NAME }}:latest"
+        cat .do/app.yaml | grep -A 10 "image:"
+        
         APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "${{ secrets.DO_APP_NAME }}" | cut -f1)
         
         if [ -z "$APP_ID" ]; then
