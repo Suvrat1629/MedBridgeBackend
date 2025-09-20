@@ -8,6 +8,7 @@ services:
       registry_type: DOCKER_HUB
       registry: suvrat1629
       repository: namaste-web
+      tag: latest
       
     
     instance_count: 1
