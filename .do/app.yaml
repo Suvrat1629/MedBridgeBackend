@@ -1,12 +1,6 @@
 name: hello
 region: nyc1
-ingress:
-  rules:
-  - component:
-      name: api
-    match:
-      path:
-        prefix: /api
+
 services:
   - name: namaste-do-web
     # Use Docker Hub image (public repository)
