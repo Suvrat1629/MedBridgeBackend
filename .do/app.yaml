@@ -16,6 +16,9 @@ services:
       registry: docker.io
       repository: suvrat1629/namaste-web
       tag: latest
+      registry_credentials:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
     
     instance_count: 1
     instance_size_slug: basic-xxs
