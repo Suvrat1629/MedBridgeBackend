@@ -1,4 +1,4 @@
-name: hello
+name: hello2
 region: nyc1
 
 services:
@@ -10,10 +10,7 @@ services:
       repository: namaste-web
       tag: latest
     routes:
-    - path: /api/fhir/search/code/
-    - path: /api/fhir/search/tm2code/
-    - path: /api/fhir/search/codeonly/
-    - path: /api/fhir/search/symptoms
+      - path: /
       
     
     instance_count: 1
