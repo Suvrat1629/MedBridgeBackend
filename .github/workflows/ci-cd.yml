@@ -1,4 +1,4 @@
-name: Build, Push and Deploy a Docker Image
+name: Deploy Docker Image from Docker Hub
 
 on:
   push:
@@ -7,44 +7,32 @@ on:
 
 permissions:
   contents: read
-  packages: write
 
 jobs:
-  build-push-deploy:
+  deploy:
     runs-on: ubuntu-latest
     
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
     
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3.3.0
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Verify Docker Hub image exists
+      run: |
+        echo "Verifying Docker Hub image: ${{ secrets.DOCKER_IMAGE_NAME }}:latest"
+        docker pull ${{ secrets.DOCKER_IMAGE_NAME }}:latest
+        echo "✅ Image verified and accessible from Docker Hub"
     
-    - name: Build and push Docker image
-      id: push
-      uses: docker/build-push-action@v6.5.0
-      with:
-        context: .
-        push: true
-        tags: ghcr.io/${{ github.repository }}:latest
-    
-    - name: Update app spec with GitHub Container Registry image
+    - name: Update app spec with Docker Hub image
       run: |
         echo "Before replacement:"
         cat .do/app.yaml | grep -A 10 "image:"
         
-        # Convert repository name to lowercase (GHCR requirement)
-        REPO_LOWERCASE=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-        echo "Using image: ghcr.io/$REPO_LOWERCASE:latest"
+        echo "Using Docker Hub image: ${{ secrets.DOCKER_IMAGE_NAME }}:latest"
         
-        # Update image repository for GitHub Container Registry
-        sed -i 's|PLACEHOLDER_IMAGE_NAME|ghcr.io/'$REPO_LOWERCASE'|g' .do/app.yaml
+        # Update image repository for Docker Hub (no credentials needed for public repo)
+        sed -i 's|PLACEHOLDER_IMAGE_NAME|${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
         sed -i 's|PLACEHOLDER_REGISTRY_TYPE|DOCKER_HUB|g' .do/app.yaml
-        sed -i 's|PLACEHOLDER_REGISTRY|ghcr.io|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_REGISTRY|docker.io|g' .do/app.yaml
         
         echo "After replacement:"
         cat .do/app.yaml | grep -A 10 "image:"
@@ -65,7 +53,7 @@ jobs:
     
     - name: Deploy to DigitalOcean App Platform
       run: |
-        echo "Deploying with image: ghcr.io/$(echo '${{ github.repository }}' | tr '[:upper:]' '[:lower:]'):latest"
+        echo "Deploying with Docker Hub image: ${{ secrets.DOCKER_IMAGE_NAME }}:latest"
         echo "Final app.yaml image configuration:"
         cat .do/app.yaml | grep -A 10 "image:"
         
