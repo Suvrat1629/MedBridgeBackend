@@ -1,6 +1,5 @@
 name: traditional-medicine-app
 region: nyc1
-
 services:
 - name: traditional-medicine-backend
   source_dir: /
@@ -29,12 +28,11 @@ services:
     success_threshold: 1
     failure_threshold: 3
   
-  # Environment variables (secrets)
   envs:
   - key: SPRING_DATA_MONGODB_URI
     scope: RUN_TIME
     type: SECRET
-    value: mongodb+srv://ramakanta:ramakanta@cluster0.qamg2kd.mongodb.net/traditional_medicine_db
+    value: PLACEHOLDER_MONGODB_URI
   
   - key: ABHA_BASE_URL
     scope: RUN_TIME
@@ -43,23 +41,23 @@ services:
   - key: ABHA_CLIENT_ID
     scope: RUN_TIME
     type: SECRET
-    value: your_client_id
+    value: PLACEHOLDER_ABHA_CLIENT_ID
   
   - key: ABHA_CLIENT_SECRET
     scope: RUN_TIME
     type: SECRET
-    value: your_client_secret
+    value: PLACEHOLDER_ABHA_CLIENT_SECRET
   
   - key: ABHA_X_HIP_ID
     scope: RUN_TIME
     type: SECRET
-    value: your_hip_id
+    value: PLACEHOLDER_ABHA_X_HIP_ID
   
   - key: ABHA_AUTH_TOKEN
     scope: RUN_TIME
     type: SECRET
-    value: your_auth_token
-  
+    value: PLACEHOLDER_ABHA_AUTH_TOKEN
+ 
   - key: ABHA_OTP_VALIDITY_MINUTES
     scope: RUN_TIME
     value: "10"
@@ -91,13 +89,13 @@ services:
   - key: SPRING_SECURITY_USER_NAME
     scope: RUN_TIME
     type: SECRET
-    value: admin
-  
+    value: PLACEHOLDER_SPRING_USER_NAME
+ 
   - key: SPRING_SECURITY_USER_PASSWORD
     scope: RUN_TIME
     type: SECRET
-    value: password
-  
+    value: PLACEHOLDER_SPRING_USER_PASSWORD
+ 
   - key: SPRING_SECURITY_USER_ROLES
     scope: RUN_TIME
     value: USER
