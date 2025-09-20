@@ -366,9 +366,11 @@ public class NamasteTerminologyService {
      * Searches in both code_description and tm2_definition fields with fuzzy matching
      * Returns results ordered by text similarity to the query
      * Now supports multiple symptoms - documents must match ALL provided symptoms
+     * Enhanced to return all three traditional medicine mappings for each matched disease
+     * Results are grouped by TM2 code so frontend knows which mappings belong together
      */
-    public List<NamasteCode> searchBySymptoms(List<String> symptoms) {
-        log.info("Searching by symptoms/description: {}", symptoms);
+    public List<DiseaseMapping> searchBySymptomsGrouped(List<String> symptoms) {
+        log.info("Searching by symptoms/description (grouped): {}", symptoms);
 
         if (symptoms == null || symptoms.isEmpty()) {
             return List.of(); // Return empty list if no symptoms provided
@@ -396,7 +398,7 @@ public class NamasteTerminologyService {
         }
 
         // Calculate multi-symptom similarity scores and sort by relevance
-        return results.stream()
+        List<NamasteCode> scoredResults = results.stream()
                 .map(code -> {
                     // Calculate similarity score based on all symptoms
                     double similarityScore = calculateMultiSymptomSimilarityScore(validSymptoms, code);
@@ -406,6 +408,52 @@ public class NamasteTerminologyService {
                 })
                 .filter(code -> code.getConfidenceScore() > 0.0) // Only keep codes with some relevance
                 .sorted((code1, code2) -> Double.compare(code2.getConfidenceScore(), code1.getConfidenceScore())) // Sort by similarity desc
+                .collect(Collectors.toList());
+
+        // Now for each matched document, get all three traditional medicine mappings using searchByCode
+        List<DiseaseMapping> groupedResults = new ArrayList<>();
+        HashSet<String> processedTm2Codes = new HashSet<>(); // To avoid duplicate processing
+
+        for (NamasteCode matchedCode : scoredResults) {
+            String tm2Code = matchedCode.getTm2Code();
+
+            // Skip if we've already processed this TM2 code
+            if (tm2Code != null && !processedTm2Codes.contains(tm2Code)) {
+                processedTm2Codes.add(tm2Code);
+
+                log.info("Getting all mappings for TM2 code: {}", tm2Code);
+
+                // Call searchByCode to get all three traditional medicine mappings
+                List<NamasteCode> allMappings = searchByCode(tm2Code);
+
+                if (!allMappings.isEmpty()) {
+                    // Create a disease mapping group
+                    DiseaseMapping diseaseMapping = new DiseaseMapping();
+                    diseaseMapping.setTm2Code(tm2Code);
+                    diseaseMapping.setTm2Title(matchedCode.getTm2Title());
+                    diseaseMapping.setTm2Definition(matchedCode.getTm2Definition());
+                    diseaseMapping.setSimilarityScore(matchedCode.getConfidenceScore()); // Symptom similarity score
+                    diseaseMapping.setMappings(allMappings);
+
+                    groupedResults.add(diseaseMapping);
+                    log.info("Added disease group for TM2 code: {} with {} traditional medicine mappings", tm2Code, allMappings.size());
+                }
+            }
+        }
+
+        log.info("FOUND {} DISEASE GROUPS (not individual mappings)", groupedResults.size());
+        int totalMappings = groupedResults.stream().mapToInt(DiseaseMapping::getMappingCount).sum();
+        log.info("Total individual mappings across all disease groups: {}", totalMappings);
+        return groupedResults;
+    }
+
+    /**
+     * Keep the original method for backward compatibility
+     */
+    public List<NamasteCode> searchBySymptoms(List<String> symptoms) {
+        // Convert grouped results back to flat list for backward compatibility
+        return searchBySymptomsGrouped(symptoms).stream()
+                .flatMap(diseaseMapping -> diseaseMapping.getMappings().stream())
                 .collect(Collectors.toList());
     }
 
@@ -651,6 +699,80 @@ public class NamasteTerminologyService {
 
         public void setLowConfidenceMappings(long lowConfidenceMappings) {
             this.lowConfidenceMappings = lowConfidenceMappings;
+        }
+    }
+
+    /**
+     * Class to group disease mappings by TM2 code
+     * Contains the TM2 disease information and all its traditional medicine mappings
+     */
+    public static class DiseaseMapping {
+        private String tm2Code;
+        private String tm2Title;
+        private String tm2Definition;
+        private Double similarityScore; // How well this disease matched the symptoms
+        private List<NamasteCode> mappings; // All traditional medicine mappings for this disease
+
+        public DiseaseMapping() {
+            this.mappings = new ArrayList<>();
+        }
+
+        // Getters and Setters
+        public String getTm2Code() {
+            return tm2Code;
+        }
+
+        public void setTm2Code(String tm2Code) {
+            this.tm2Code = tm2Code;
+        }
+
+        public String getTm2Title() {
+            return tm2Title;
+        }
+
+        public void setTm2Title(String tm2Title) {
+            this.tm2Title = tm2Title;
+        }
+
+        public String getTm2Definition() {
+            return tm2Definition;
+        }
+
+        public void setTm2Definition(String tm2Definition) {
+            this.tm2Definition = tm2Definition;
+        }
+
+        public Double getSimilarityScore() {
+            return similarityScore;
+        }
+
+        public void setSimilarityScore(Double similarityScore) {
+            this.similarityScore = similarityScore;
+        }
+
+        public List<NamasteCode> getMappings() {
+            return mappings;
+        }
+
+        public void setMappings(List<NamasteCode> mappings) {
+            this.mappings = mappings != null ? mappings : new ArrayList<>();
+        }
+
+        // Helper methods
+        public int getMappingCount() {
+            return mappings != null ? mappings.size() : 0;
+        }
+
+        public boolean hasAyurvedaMapping() {
+            return mappings != null && mappings.stream().anyMatch(m -> "ayurveda".equalsIgnoreCase(m.getType()));
+        }
+
+        public boolean hasSiddhaMapping() {
+            return mappings != null && mappings.stream().anyMatch(m -> "siddha".equalsIgnoreCase(m.getType()));
+        }
+
+        public boolean hasUnaniMapping() {
+            return mappings != null && mappings.stream().anyMatch(m -> "unani".equalsIgnoreCase(m.getType()));
         }
     }
 }
