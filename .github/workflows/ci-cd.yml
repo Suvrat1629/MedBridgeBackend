@@ -125,6 +125,10 @@ jobs:
         # Replace Docker image repository placeholder  
         sed -i 's|repository: suvrat1629/namaste-web|repository: ${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
         
+        
+        # Replace Docker image repository placeholder  
+        
+        
         # Replace all environment variable placeholders
         sed -i 's|PLACEHOLDER_MONGODB_URI|${{ secrets.SPRING_DATA_MONGODB_URI }}|g' .do/app.yaml
         sed -i 's|PLACEHOLDER_ABHA_CLIENT_ID|${{ secrets.ABHA_CLIENT_ID }}|g' .do/app.yaml

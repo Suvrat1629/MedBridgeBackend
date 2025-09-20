@@ -9,7 +9,7 @@ import org.springframework.context.annotation.Configuration;
 @Data
 public class FhirConfig {
 
-    private String baseUrl = "http://localhost:8080/fhir";
+    private String baseUrl = "http://localhost:8082/fhir";
     private String name = "NAMASTE-TM2 FHIR Terminology Server";
     private String version = "1.0.0";
     private String implementationDescription = "FHIR R4 Terminology Server for NAMASTE to ICD-11 TM2 mapping";
