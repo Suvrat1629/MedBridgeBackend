@@ -3,23 +3,13 @@ region: nyc1
 
 services:
   - name: namaste-do-web
-    source_dir: /
-    
-    github:
-      repo: Suvrat1629/MedBridgeBackend
-      branch: main
-      deploy_on_push: true
-    
     # Use Docker Hub image
     image:
       registry_type: DOCKER_HUB
       registry: docker.io
       repository: suvrat1629/namaste-web
       tag: latest
-      registry_credentials:
-        username: ${{ secrets.DOCKER_USERNAME }}
-        password: ${{ secrets.DOCKER_PASSWORD }}
-      registry_credentials: <base64-encoded-string>
+      registry_credentials: PLACEHOLDER_DOCKER_CREDENTIALS
     
     instance_count: 1
     instance_size_slug: basic-xxs
