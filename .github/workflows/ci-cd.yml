@@ -120,10 +120,14 @@ jobs:
     - name: Update app spec with secrets
       run: |
         # Replace GitHub repository placeholder
-        sed -i 's|YOUR_GITHUB_USERNAME/YOUR_REPO_NAME|${{ github.repository }}|g' .do/app.yaml
+        sed -i 's|Suvrat1629/MedBridgeBackend|${{ github.repository }}|g' .do/app.yaml
         
         # Replace Docker image repository placeholder  
-        sed -i 's|repository: YOUR_DOCKER_USERNAME/YOUR_REPO_NAME|repository: ${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
+        sed -i 's|repository: suvrat1629/namaste-web|repository: ${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
+        
+        
+        # Replace Docker image repository placeholder  
+        
         
         # Replace all environment variable placeholders
         sed -i 's|PLACEHOLDER_MONGODB_URI|${{ secrets.SPRING_DATA_MONGODB_URI }}|g' .do/app.yaml
