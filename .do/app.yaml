@@ -3,7 +3,7 @@ region: nyc1
 
 services:
   - name: namaste-do-web
-    # Use GitHub Container Registry image
+    # Use Docker Hub image (public repository)
     image:
       registry_type: PLACEHOLDER_REGISTRY_TYPE
       registry: PLACEHOLDER_REGISTRY
