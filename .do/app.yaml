@@ -16,6 +16,10 @@ services:
       registry: docker.io
       repository: suvrat1629/namaste-web
       tag: latest
+      registry_credentials:
+        username: ${{ secrets.DOCKER_USERNAME }}
+        password: ${{ secrets.DOCKER_PASSWORD }}
+      registry_credentials: <base64-encoded-string>
     
     instance_count: 1
     instance_size_slug: basic-xxs
@@ -35,7 +39,7 @@ services:
       - key: SPRING_DATA_MONGODB_URI
         scope: RUN_TIME
         type: SECRET
-        value: ${MONGODB_URI}
+        value: PLACEHOLDER_MONGODB_URI
       
       # ABHA Configuration
       - key: ABHA_BASE_URL
@@ -45,22 +49,22 @@ services:
       - key: ABHA_CLIENT_ID
         scope: RUN_TIME
         type: SECRET
-        value: ${ABHA_CLIENT_ID}
+        value: PLACEHOLDER_ABHA_CLIENT_ID
       
       - key: ABHA_CLIENT_SECRET
         scope: RUN_TIME
         type: SECRET
-        value: ${ABHA_CLIENT_SECRET}
+        value: PLACEHOLDER_ABHA_CLIENT_SECRET
       
       - key: ABHA_X_HIP_ID
         scope: RUN_TIME
         type: SECRET
-        value: ${ABHA_X_HIP_ID}
+        value: PLACEHOLDER_ABHA_X_HIP_ID
       
       - key: ABHA_AUTH_TOKEN
         scope: RUN_TIME
         type: SECRET
-        value: ${ABHA_AUTH_TOKEN}
+        value: PLACEHOLDER_ABHA_AUTH_TOKEN
       
       # ABHA Timeout Configuration
       - key: ABHA_OTP_VALIDITY_MINUTES
@@ -96,12 +100,12 @@ services:
       - key: SPRING_SECURITY_USER_NAME
         scope: RUN_TIME
         type: SECRET
-        value: ${SPRING_USER_NAME}
+        value: PLACEHOLDER_SPRING_USER_NAME
       
       - key: SPRING_SECURITY_USER_PASSWORD
         scope: RUN_TIME
         type: SECRET
-        value: ${SPRING_USER_PASSWORD}
+        value: PLACEHOLDER_SPRING_USER_PASSWORD
       
       - key: SPRING_SECURITY_USER_ROLES
         scope: RUN_TIME
