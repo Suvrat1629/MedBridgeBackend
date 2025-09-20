@@ -9,8 +9,10 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class NamasteTerminologyService {
@@ -37,7 +39,7 @@ public class NamasteTerminologyService {
         List<NamasteCode> results = namasteCodeRepository.findByCodeTitleContainingIgnoreCase(searchTerm.trim());
 
         // Limit results for performance
-        return results.stream().limit(maxResults).collect(java.util.stream.Collectors.toList());
+        return results.stream().limit(maxResults).collect(Collectors.toList());
     }
 
     /**
@@ -201,7 +203,7 @@ public class NamasteTerminologyService {
     public List<NamasteCode> getRecentlyUpdated(int limit) {
         log.info("Fetching {} recently updated records", limit);
         List<NamasteCode> allCodes = namasteCodeRepository.findAllByOrderByCodeTitleAsc();
-        return allCodes.stream().limit(limit).collect(java.util.stream.Collectors.toList());
+        return allCodes.stream().limit(limit).collect(Collectors.toList());
     }
 
     /**
@@ -228,7 +230,7 @@ public class NamasteTerminologyService {
             Optional<NamasteCode> tm2docu = namasteCodeRepository.findTopByCodeOrderByConfidenceScoreDesc(trimmedCode);
             if(tm2docu.isPresent())
                 trimmedCode = tm2docu.get().getTm2Code().trim();
-            Optional<List<NamasteCode>> result = namasteCodeRepository.findByAnyCode(trimmedCode);
+            Optional<List<NamasteCode>> result = namasteCodeRepository.findByTm2CodeOnly(trimmedCode);
 
             log.info("Repository call completed");
 
@@ -243,7 +245,7 @@ public class NamasteTerminologyService {
             // Filter results to only include codes with confidence score > 0.6 and limit to 6
             List<NamasteCode> filteredResults = results.stream()
                     .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
             HashMap<String,NamasteCode> finalCodes = new HashMap<>();
             for(NamasteCode code : filteredResults){
                 if(!finalCodes.containsKey(code.getType()))
@@ -304,7 +306,7 @@ public class NamasteTerminologyService {
             List<NamasteCode> filteredResults = results.stream()
                     .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
                     .limit(6)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
 
             log.info("Results after confidence filter (>0.6): {}", filteredResults.size());
             log.info("=== SEARCH BY TM2 CODE ONLY DEBUG END ===");
@@ -347,7 +349,7 @@ public class NamasteTerminologyService {
             List<NamasteCode> filteredResults = results.stream()
                     .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
                     .limit(6)
-                    .collect(java.util.stream.Collectors.toList());
+                    .collect(Collectors.toList());
 
             log.info("Results after confidence filter (>0.6): {}", filteredResults.size());
             log.info("=== SEARCH BY CODE ONLY DEBUG END ===");
@@ -362,18 +364,199 @@ public class NamasteTerminologyService {
     /**
      * Search by symptoms/description - Main feature 2
      * Searches in both code_description and tm2_definition fields with fuzzy matching
+     * Returns results ordered by text similarity to the query
+     * Now supports multiple symptoms - documents must match ALL provided symptoms
      */
-    public List<NamasteCode> searchBySymptoms(String symptomQuery) {
-        log.info("Searching by symptoms/description: {}", symptomQuery);
+    public List<NamasteCode> searchBySymptoms(List<String> symptoms) {
+        log.info("Searching by symptoms/description: {}", symptoms);
 
-        if (symptomQuery == null || symptomQuery.trim().length() < 2) {
-            return List.of(); // Return empty list for very short search terms
+        if (symptoms == null || symptoms.isEmpty()) {
+            return List.of(); // Return empty list if no symptoms provided
         }
 
-        // Escape special regex characters to prevent injection
-        String escapedQuery = escapeRegexSpecialChars(symptomQuery.trim());
+        // Filter out very short symptoms
+        List<String> validSymptoms = symptoms.stream()
+                .filter(symptom -> symptom != null && symptom.trim().length() >= 2)
+                .map(String::trim)
+                .collect(Collectors.toList());
 
-        return namasteCodeRepository.findBySymptoms(escapedQuery);
+        if (validSymptoms.isEmpty()) {
+            return List.of();
+        }
+
+        log.info("Valid symptoms for search: {}", validSymptoms);
+
+        // Use the optimized repository method for AND logic
+        List<NamasteCode> results = namasteCodeRepository.findByAllSymptoms(validSymptoms);
+
+        log.info("Repository AND query returned {} documents (documents matching ALL symptoms)", results.size());
+
+        if (results.isEmpty()) {
+            return List.of();
+        }
+
+        // Calculate multi-symptom similarity scores and sort by relevance
+        return results.stream()
+                .map(code -> {
+                    // Calculate similarity score based on all symptoms
+                    double similarityScore = calculateMultiSymptomSimilarityScore(validSymptoms, code);
+                    // Store the similarity score temporarily (we'll use confidence_score field for this)
+                    code.setConfidenceScore(similarityScore);
+                    return code;
+                })
+                .filter(code -> code.getConfidenceScore() > 0.0) // Only keep codes with some relevance
+                .sorted((code1, code2) -> Double.compare(code2.getConfidenceScore(), code1.getConfidenceScore())) // Sort by similarity desc
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Calculate similarity score between multiple symptoms and document text fields
+     * Returns a score between 0.0 and 1.0 where 1.0 is perfect match
+     */
+    private double calculateMultiSymptomSimilarityScore(List<String> symptoms, NamasteCode code) {
+        double totalScore = 0.0;
+        int scoredSymptoms = 0;
+
+        // Calculate score for each symptom and take the average
+        for (String symptom : symptoms) {
+            String symptomLower = symptom.toLowerCase();
+            double symptomScore = calculateSingleSymptomScore(symptomLower, code);
+
+            if (symptomScore > 0.0) {
+                totalScore += symptomScore;
+                scoredSymptoms++;
+            }
+        }
+
+        if (scoredSymptoms == 0) {
+            return 0.0;
+        }
+
+        // Calculate average score
+        double averageScore = totalScore / scoredSymptoms;
+
+        // Bonus for matching multiple symptoms
+        double multiSymptomBonus = 0.0;
+        if (scoredSymptoms > 1) {
+            // Give bonus based on how many symptoms matched
+            multiSymptomBonus = (double) (scoredSymptoms - 1) * 0.1; // 10% bonus per additional symptom
+            multiSymptomBonus = Math.min(multiSymptomBonus, 0.3); // Cap at 30% bonus
+        }
+
+        return Math.min(1.0, averageScore + multiSymptomBonus);
+    }
+
+    /**
+     * Calculate similarity score for a single symptom against a document
+     */
+    private double calculateSingleSymptomScore(String symptom, NamasteCode code) {
+        double maxScore = 0.0;
+
+        // Check code_description field
+        if (code.getCodeDescription() != null) {
+            double descScore = calculateTextSimilarity(symptom, code.getCodeDescription().toLowerCase());
+            maxScore = Math.max(maxScore, descScore);
+        }
+
+        // Check tm2_definition field
+        if (code.getTm2Definition() != null) {
+            double defScore = calculateTextSimilarity(symptom, code.getTm2Definition().toLowerCase());
+            maxScore = Math.max(maxScore, defScore);
+        }
+
+        // Check code_title field for additional matching
+        if (code.getCodeTitle() != null) {
+            double titleScore = calculateTextSimilarity(symptom, code.getCodeTitle().toLowerCase());
+            maxScore = Math.max(maxScore, titleScore * 0.8); // Slightly lower weight for title
+        }
+
+        // Check tm2_title field
+        if (code.getTm2Title() != null) {
+            double tm2TitleScore = calculateTextSimilarity(symptom, code.getTm2Title().toLowerCase());
+            maxScore = Math.max(maxScore, tm2TitleScore * 0.8); // Slightly lower weight for title
+        }
+
+        return maxScore;
+    }
+
+    /**
+     * Calculate similarity score between query and document text fields
+     * Returns a score between 0.0 and 1.0 where 1.0 is perfect match
+     */
+    private double calculateSimilarityScore(String query, NamasteCode code) {
+        double maxScore = 0.0;
+
+        // Check code_description field
+        if (code.getCodeDescription() != null) {
+            double descScore = calculateTextSimilarity(query, code.getCodeDescription().toLowerCase());
+            maxScore = Math.max(maxScore, descScore);
+        }
+
+        // Check tm2_definition field
+        if (code.getTm2Definition() != null) {
+            double defScore = calculateTextSimilarity(query, code.getTm2Definition().toLowerCase());
+            maxScore = Math.max(maxScore, defScore);
+        }
+
+        // Check code_title field for additional matching
+        if (code.getCodeTitle() != null) {
+            double titleScore = calculateTextSimilarity(query, code.getCodeTitle().toLowerCase());
+            maxScore = Math.max(maxScore, titleScore * 0.8); // Slightly lower weight for title
+        }
+
+        // Check tm2_title field
+        if (code.getTm2Title() != null) {
+            double tm2TitleScore = calculateTextSimilarity(query, code.getTm2Title().toLowerCase());
+            maxScore = Math.max(maxScore, tm2TitleScore * 0.8); // Slightly lower weight for title
+        }
+
+        return maxScore;
+    }
+
+    /**
+     * Simple text similarity calculation using word overlap and containment
+     * This is a basic implementation - for production, consider using more sophisticated
+     * algorithms like Jaccard similarity, Levenshtein distance, or TF-IDF
+     */
+    private double calculateTextSimilarity(String query, String text) {
+        if (query == null || text == null || query.trim().isEmpty() || text.trim().isEmpty()) {
+            return 0.0;
+        }
+
+        String queryTrimmed = query.trim();
+        String textTrimmed = text.trim();
+
+        // Exact match gets highest score
+        if (textTrimmed.contains(queryTrimmed)) {
+            return 1.0;
+        }
+
+        // Split into words and calculate overlap
+        String[] queryWords = queryTrimmed.split("\\s+");
+        String[] textWords = textTrimmed.split("\\s+");
+
+        int matchingWords = 0;
+        for (String queryWord : queryWords) {
+            if (queryWord.length() > 2) { // Only consider words longer than 2 characters
+                for (String textWord : textWords) {
+                    if (textWord.contains(queryWord) || queryWord.contains(textWord)) {
+                        matchingWords++;
+                        break; // Count each query word only once
+                    }
+                }
+            }
+        }
+
+        // Calculate similarity as ratio of matching words
+        double wordSimilarity = queryWords.length > 0 ? (double) matchingWords / queryWords.length : 0.0;
+
+        // Boost score if query is a substring of text (partial match)
+        double substringBonus = 0.0;
+        if (textTrimmed.contains(queryTrimmed)) {
+            substringBonus = 0.3;
+        }
+
+        return Math.min(1.0, wordSimilarity + substringBonus);
     }
 
     /**

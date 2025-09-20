@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface NamasteCodeRepository extends MongoRepository<NamasteCode, String> {
+public interface NamasteCodeRepository extends MongoRepository<NamasteCode, String>, NamasteCodeRepositoryCustom {
 
     /**
      * Search by code - checks both tm2_code and code fields (EXACT MATCH ONLY)
@@ -38,15 +38,23 @@ public interface NamasteCodeRepository extends MongoRepository<NamasteCode, Stri
     Optional<List<NamasteCode>> findByCodeOnly(@Param("codeValue") String codeValue);
 
     /**
-     * Search by symptoms/description - checks both code_description and tm2_definition fields
+     * Search by symptoms/description - checks all 4 text fields
+     * code_description, tm2_definition, tm2_title, code_title
      * Uses case-insensitive regex matching for fuzzy search
      * This is the second main search feature requested
      */
     @Query("{'$or': [" +
             "{'code_description': {$regex: ?0, $options: 'i'}}, " +
-            "{'tm2_definition': {$regex: ?0, $options: 'i'}}" +
+            "{'tm2_definition': {$regex: ?0, $options: 'i'}}, " +
+            "{'tm2_title': {$regex: ?0, $options: 'i'}}, " +
+            "{'code_title': {$regex: ?0, $options: 'i'}}" +
             "]}")
     List<NamasteCode> findBySymptoms(@Param("symptomQuery") String symptomQuery);
+
+    /**
+     * Multi-symptom search with AND logic is now available via findByAllSymptoms() method
+     * from NamasteCodeRepositoryCustom interface
+     */
 
     // Find by traditional medicine code (formerly NAMASTE code)
     Optional<NamasteCode> findByCode(String code);
