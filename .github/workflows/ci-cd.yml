@@ -1,25 +1,27 @@
-name: Build, Push to Docker Hub, and Deploy
+name: CI/CD Pipeline
 
 on:
   push:
-    branches: [main]
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: docker.io
 
 jobs:
-  build-and-deploy:
+  build:
+    name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
     
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    
-    - name: Build Java application
-      run: mvn clean package -DskipTests
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
     
     - name: Log in to Docker Hub
       uses: docker/login-action@v3
@@ -27,38 +29,80 @@ jobs:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
     
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ secrets.DOCKER_IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+    
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
         push: true
-        tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_IMAGE_NAME }}:latest
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+  deploy:
+    name: Deploy to DigitalOcean
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
-    - name: Deploy to DigitalOcean
-      uses: appleboy/ssh-action@v1.0.3
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Install doctl
+      uses: digitalocean/action-doctl@v2
       with:
-        host: ${{ secrets.DO_HOST }}
-        username: ${{ secrets.DO_USERNAME }}
-        key: ${{ secrets.DO_SSH_PRIVATE_KEY }}
-        script: |
-          # Stop existing container
-          docker stop ${{ secrets.DO_APP_NAME }} || true
-          docker rm ${{ secrets.DO_APP_NAME }} || true
+        token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
+    
+    - name: Update app spec with new image
+      run: |
+        sed -i 's|YOUR_DOCKER_USERNAME/YOUR_REPO_NAME:latest|${{ secrets.DOCKER_IMAGE_NAME }}:latest|g' .do/app.yaml
+    
+    - name: Deploy to DigitalOcean App Platform
+      run: |
+        APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "${{ secrets.DO_APP_NAME }}" | cut -f1)
+        
+        if [ -z "$APP_ID" ]; then
+          echo "Creating new app: ${{ secrets.DO_APP_NAME }}"
+          doctl apps create --spec .do/app.yaml
+        else
+          echo "Updating existing app: ${{ secrets.DO_APP_NAME }} (ID: $APP_ID)"
+          doctl apps update $APP_ID --spec .do/app.yaml
+        fi
+    
+    - name: Wait for deployment
+      run: |
+        echo "Waiting for deployment of ${{ secrets.DO_APP_NAME }} to complete..."
+        APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "${{ secrets.DO_APP_NAME }}" | cut -f1)
+        
+        for i in {1..30}; do
+          STATUS=$(doctl apps get $APP_ID --format Phase --no-header)
+          echo "Deployment status: $STATUS"
           
-          # Pull latest image
-          docker pull ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_IMAGE_NAME }}:latest
+          if [ "$STATUS" = "ACTIVE" ]; then
+            echo "✅ Deployment successful!"
+            break
+          elif [ "$STATUS" = "ERROR" ]; then
+            echo "❌ Deployment failed!"
+            exit 1
+          fi
           
-          # Run new container
-          docker run -d \
-            --name ${{ secrets.DO_APP_NAME }} \
-            --restart unless-stopped \
-            -p 80:8080 \
-            -e ABHA_AUTH_TOKEN="${{ secrets.ABHA_AUTH_TOKEN }}" \
-            -e ABHA_CLIENT_ID="${{ secrets.ABHA_CLIENT_ID }}" \
-            -e ABHA_CLIENT_SECRET="${{ secrets.ABHA_CLIENT_SECRET }}" \
-            -e ABHA_X_HIP_ID="${{ secrets.ABHA_X_HIP_ID }}" \
-            -e DIGITALOCEAN_ACCESS_TOKEN="${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}" \
-            -e SPRING_DATA_MONGODB_URI="${{ secrets.SPRING_DATA_MONGODB_URI }}" \
-            -e SPRING_SECURITY_USER_NAME="${{ secrets.SPRING_SECURITY_USER_NAME }}" \
-            -e SPRING_SECURITY_USER_PASSWORD="${{ secrets.SPRING_SECURITY_USER_PASSWORD }}" \
-            ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_IMAGE_NAME }}:latest
+          sleep 20
+        done
+    
+    - name: Get App URL
+      run: |
+        APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "${{ secrets.DO_APP_NAME }}" | cut -f1)
+        APP_URL=$(doctl apps get $APP_ID --format LiveURL --no-header)
+        echo "🚀 Application deployed at: $APP_URL"
