@@ -117,9 +117,26 @@ jobs:
       with:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
     
-    - name: Update app spec with new image
+    - name: Update app spec with secrets
       run: |
-        sed -i 's|YOUR_DOCKER_USERNAME/YOUR_REPO_NAME:latest|${{ secrets.DOCKER_IMAGE_NAME }}:latest|g' .do/app.yaml
+        # Replace GitHub repository placeholder
+        sed -i 's|Suvrat1629/MedBridgeBackend|${{ github.repository }}|g' .do/app.yaml
+        
+        # Replace Docker image repository placeholder  
+        sed -i 's|repository: suvrat1629/namaste-web|repository: ${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
+        
+        # Replace all environment variable placeholders
+        sed -i 's|PLACEHOLDER_MONGODB_URI|${{ secrets.SPRING_DATA_MONGODB_URI }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_ABHA_CLIENT_ID|${{ secrets.ABHA_CLIENT_ID }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_ABHA_CLIENT_SECRET|${{ secrets.ABHA_CLIENT_SECRET }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_ABHA_X_HIP_ID|${{ secrets.ABHA_X_HIP_ID }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_ABHA_AUTH_TOKEN|${{ secrets.ABHA_AUTH_TOKEN }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_SPRING_USER_NAME|${{ secrets.SPRING_SECURITY_USER_NAME }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_SPRING_USER_PASSWORD|${{ secrets.SPRING_SECURITY_USER_PASSWORD }}|g' .do/app.yaml
+        
+        # Debug: Show the updated app.yaml
+        echo "=== Updated app.yaml ==="
+        cat .do/app.yaml
     
     - name: Deploy to DigitalOcean App Platform
       run: |
