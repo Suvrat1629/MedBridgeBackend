@@ -1,4 +1,4 @@
-name: Digital-Ocean-Deployment
+name: digital-ocean-deployment
 region: nyc1
 
 services:
