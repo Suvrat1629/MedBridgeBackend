@@ -9,7 +9,6 @@ services:
       registry: docker.io
       repository: PLACEHOLDER_IMAGE_NAME
       tag: latest
-      registry_credentials: "$your_username:$access_token"
     
     instance_count: 1
     instance_size_slug: basic-xxs
