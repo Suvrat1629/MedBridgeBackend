@@ -74,11 +74,10 @@ jobs:
           echo "Updating existing app: ${{ secrets.DO_APP_NAME }} (ID: $APP_ID)"
           doctl apps update $APP_ID --spec .do/app.yaml
         fi
-    - name: List DigitalOcean Apps
+    - name: Debug App List
       run: |
-        echo "Listing DigitalOcean apps..."
+        echo "DO_APP_NAME: ${{ secrets.DO_APP_NAME }}"
         doctl apps list --format ID,Spec.Name --no-header
-        echo "Apps listed above."
     - name: Wait for deployment
       run: |
         echo "Waiting for deployment of ${{ secrets.DO_APP_NAME }} to complete..."
