@@ -83,6 +83,7 @@ jobs:
     - name: Deploy to DigitalOcean App Platform
       run: |
         echo "Deploying with image: ${{ secrets.DOCKER_IMAGE_NAME }}:latest"
+        echo "Final app.yaml image configuration:"
         cat .do/app.yaml | grep -A 10 "image:"
         
         APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "${{ secrets.DO_APP_NAME }}" | cut -f1)
