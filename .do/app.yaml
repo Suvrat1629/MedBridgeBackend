@@ -6,12 +6,10 @@ services:
     # Use Docker Hub image (public repository)
     image:
       registry_type: DOCKER_HUB
-      registry: docker.io
+      registry: hub.docker.com
       repository: suvrat1629/namaste-web
       tag: latest
-      registry_credentials: "suvrat1629:PLACEHOLDER_DOCKERHUB_PASSWORD"
-      deploy_on_push:
-        enabled: true
+      
     
     instance_count: 1
     instance_size_slug: basic-xxs
