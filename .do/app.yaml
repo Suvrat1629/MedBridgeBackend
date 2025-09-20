@@ -9,7 +9,7 @@ services:
       registry: docker.io
       repository: suvrat1629/namaste-web
       tag: latest
-      registry_credentials: PLACEHOLDER_DOCKER_CREDENTIALS
+      registry_credentials: "$your_username:$access_token"
     
     instance_count: 1
     instance_size_slug: basic-xxs
