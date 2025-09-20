@@ -1,127 +1,35 @@
-name: CI/CD Pipeline
+name: Build, Push and Deploy a Docker Image
 
 on:
   push:
-    branches: [main, develop]
-  pull_request:
     branches: [main]
-  workflow_dispatch:
 
-env:
-  REGISTRY: docker.io
+permissions:
+  contents: read
+  packages: write
 
 jobs:
-  build:
-    name: Build and Push Docker Image
+  build-push-deploy-image:
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
-    
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
       - name: Log in to Docker Hub
-        uses: docker/login-action@v3
+        uses: docker/login-action@v3.3.0
         with:
+          registry: docker.io
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-      
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKER_USERNAME }}/namaste-web
-          tags: |
-            type=ref,event=branch
-            type=ref,event=pr
-            type=sha,prefix={{branch}}-
-            type=raw,value=latest,enable={{is_default_branch}}
-      
       - name: Build and push Docker image
         id: push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6.5.0
         with:
           context: .
-          platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-  deploy:
-    name: Deploy to DigitalOcean
-    runs-on: ubuntu-latest
-    needs: [build]
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
-      - name: Install doctl
-        uses: digitalocean/action-doctl@v2
+          tags: ${{ secrets.DOCKER_USERNAME }}/${{ secrets.DOCKER_IMAGE_NAME }}:latest
+      - name: Deploy to Digital Ocean
+        uses: digitalocean/app_action/deploy@v2
+        env:
+          SAMPLE_DIGEST: ${{ steps.push.outputs.digest }}
         with:
           token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
-      
-      - name: Update app spec with secrets
-        run: |
-          # Replace GitHub repository placeholder
-          sed -i 's|Suvrat1629/MedBridgeBackend|${{ github.repository }}|g' .do/app.yaml
-          
-          # Replace Docker image repository placeholder  
-          sed -i 's|repository: suvrat1629/namaste-web|repository: ${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
-          
-          # Replace all environment variable placeholders
-          sed -i 's|PLACEHOLDER_MONGODB_URI|${{ secrets.SPRING_DATA_MONGODB_URI }}|g' .do/app.yaml
-          sed -i 's|PLACEHOLDER_ABHA_CLIENT_ID|${{ secrets.ABHA_CLIENT_ID }}|g' .do/app.yaml
-          sed -i 's|PLACEHOLDER_ABHA_CLIENT_SECRET|${{ secrets.ABHA_CLIENT_SECRET }}|g' .do/app.yaml
-          sed -i 's|PLACEHOLDER_ABHA_X_HIP_ID|${{ secrets.ABHA_X_HIP_ID }}|g' .do/app.yaml
-          sed -i 's|PLACEHOLDER_ABHA_AUTH_TOKEN|${{ secrets.ABHA_AUTH_TOKEN }}|g' .do/app.yaml
-          sed -i 's|PLACEHOLDER_SPRING_USER_NAME|${{ secrets.SPRING_SECURITY_USER_NAME }}|g' .do/app.yaml
-          sed -i 's|PLACEHOLDER_SPRING_USER_PASSWORD|${{ secrets.SPRING_SECURITY_USER_PASSWORD }}|g' .do/app.yaml
-          
-          # Debug: Show the updated app.yaml
-          echo "=== Updated app.yaml ==="
-          cat .do/app.yaml
-      
-      - name: Deploy to DigitalOcean App Platform
-        run: |
-          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "${{ secrets.DO_APP_NAME }}" | cut -f1)
-          
-          if [ -z "$APP_ID" ]; then
-            echo "Creating new app: ${{ secrets.DO_APP_NAME }}"
-            doctl apps create --spec .do/app.yaml
-          else
-            echo "Updating existing app: ${{ secrets.DO_APP_NAME }} (ID: $APP_ID)"
-            doctl apps update $APP_ID --spec .do/app.yaml
-          fi
-      
-      - name: Wait for deployment
-        run: |
-          echo "Waiting for deployment of ${{ secrets.DO_APP_NAME }} to complete..."
-          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "${{ secrets.DO_APP_NAME }}" | cut -f1)
-          
-          for i in {1..30}; do
-            STATUS=$(doctl apps get $APP_ID --format Phase --no-header)
-            echo "Deployment status: $STATUS"
-            
-            if [ "$STATUS" = "ACTIVE" ]; then
-              echo "✅ Deployment successful!"
-              break
-            elif [ "$STATUS" = "ERROR" ]; then
-              echo "❌ Deployment failed!"
-              exit 1
-            fi
-            
-            sleep 20
-          done
-      
-      - name: Get App URL
-        run: |
-          APP_ID=$(doctl apps list --format ID,Spec.Name --no-header | grep "${{ secrets.DO_APP_NAME }}" | cut -f1)
-          APP_URL=$(doctl apps get $APP_ID --format LiveURL --no-header)
-          echo "🚀 Application deployed at: $APP_URL"
