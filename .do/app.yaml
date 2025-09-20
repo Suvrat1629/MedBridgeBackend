@@ -1,4 +1,4 @@
-name: livi
+name: rishi
 region: nyc1
 
 services:
@@ -9,9 +9,8 @@ services:
       registry: suvrat1629
       repository: namaste-web
       tag: latest
-    health_check:
-      initial_delay_seconds: 30
-      http_path: /
+    routes:
+    - path: /api
       
     
     instance_count: 1
