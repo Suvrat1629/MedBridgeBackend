@@ -2,7 +2,7 @@ name: Digital-Ocean-Deployment
 region: nyc1
 
 services:
-  - name: traditional-medicine-backend
+  - name: namaste-do-web
     source_dir: /
     
     github:
