@@ -1,6 +1,12 @@
-name: abhi-chalega
+name: hello
 region: nyc1
-
+ingress:
+  rules:
+  - component:
+      name: api
+    match:
+      path:
+        prefix: /api
 services:
   - name: namaste-do-web
     # Use Docker Hub image (public repository)
@@ -10,7 +16,14 @@ services:
       repository: namaste-web
       tag: latest
     routes:
-    - path: /api
+    - path: /api/fhir/search/code/{codeValue}
+    - path: /api/fhir/search/tm2code/{codeValue}
+    - path: /api/fhir/search/codeonly/{codeValue}
+    - path: /api/fhir/search/symptoms
+      query_params:
+      - name: query
+        value: "{query}"  # Placeholder for query parameter
+    - path: /api  # Optional catch-all for /api prefix
       
     
     instance_count: 1
