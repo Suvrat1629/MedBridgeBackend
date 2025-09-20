@@ -67,9 +67,12 @@ jobs:
     
     - name: Update app spec with new image and credentials
       run: |
+        # Create base64 encoded credentials for DigitalOcean
+        DOCKER_CREDS=$(echo -n "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" | base64 -w 0)
+        
         # Update image repository and credentials
         sed -i 's|PLACEHOLDER_IMAGE_NAME|${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
-        sed -i 's|\$your_username:\$access_token|${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}|g' .do/app.yaml
+        sed -i 's|\$your_username:\$access_token|'$DOCKER_CREDS'|g' .do/app.yaml
     
     - name: Verify Docker image exists
       run: |
