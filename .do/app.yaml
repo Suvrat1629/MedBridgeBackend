@@ -19,6 +19,7 @@ services:
       registry_credentials:
         username: ${{ secrets.DOCKER_USERNAME }}
         password: ${{ secrets.DOCKER_PASSWORD }}
+      registry_credentials: <base64-encoded-string>
     
     instance_count: 1
     instance_size_slug: basic-xxs
