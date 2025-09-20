@@ -40,6 +40,7 @@ jobs:
         sed -i 's|PLACEHOLDER_ABHA_AUTH_TOKEN|${{ secrets.ABHA_AUTH_TOKEN }}|g' .do/app.yaml
         sed -i 's|PLACEHOLDER_SPRING_USER_NAME|${{ secrets.SPRING_SECURITY_USER_NAME }}|g' .do/app.yaml
         sed -i 's|PLACEHOLDER_SPRING_USER_PASSWORD|${{ secrets.SPRING_SECURITY_USER_PASSWORD }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_DOCKERHUB_PASSWORD|${{ secrets.DOCKER_PASSWORD }}|g' .do/app.yaml
         
         echo "After replacement:"
         cat .do/app.yaml | grep -A 10 "image:"
