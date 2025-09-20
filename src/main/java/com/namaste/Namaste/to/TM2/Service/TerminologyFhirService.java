@@ -245,35 +245,71 @@ public class TerminologyFhirService {
     }
 
     /**
-     * Create FHIR Bundle for search by symptoms result - MAIN FEATURE 2
+     * Create FHIR Parameters for search by symptoms result - MAIN FEATURE 2
+     * Modified to return error if > 20 results, otherwise return all results without filtering
+     * Filtering code kept but unused for future reference
      */
-    public Bundle createSearchBySymptomsResult(String symptomQuery) {
-        log.info("Creating FHIR Bundle for symptom search: {}", symptomQuery);
+    public Parameters createSearchBySymptomsResult(List<String> symptoms) {
+        log.info("Creating FHIR Parameters for symptoms search: {}", symptoms);
 
-        Bundle bundle = new Bundle();
-        bundle.setId("search-by-symptoms-result-" + System.currentTimeMillis());
-        bundle.setType(Bundle.BundleType.SEARCHSET);
-        bundle.setTimestamp(new Date());
+        if (symptoms == null || symptoms.isEmpty()) {
+            // Create empty parameters if no symptoms provided
+            Parameters parameters = new Parameters();
+            parameters.setId("search-by-symptoms-result-" + System.currentTimeMillis());
+            parameters.addParameter("result", new BooleanType(false));
+            parameters.addParameter("message", new StringType("No symptoms provided"));
+            return parameters;
+        }
 
-        // Search using the terminology service
-        List<NamasteCode> results = terminologyService.searchBySymptoms(symptomQuery);
+        // Search using the terminology service (results are already ordered by symptom relevance)
+        List<NamasteCode> results = terminologyService.searchBySymptoms(symptoms);
 
-        bundle.setTotal(results.size());
+        if (results.isEmpty()) {
+            // Create empty parameters if no results found
+            Parameters parameters = new Parameters();
+            parameters.setId("search-by-symptoms-result-" + System.currentTimeMillis());
+            parameters.addParameter("result", new BooleanType(false));
+            parameters.addParameter("message", new StringType("No symptoms found matching: " + String.join(", ", symptoms)));
+            return parameters;
+        }
 
-        // Add each result as a Bundle entry with Parameters resource
+        // NEW LOGIC: Check if results exceed 20 - return error if so
+        if (results.size() > 20) {
+            Parameters parameters = new Parameters();
+            parameters.setId("search-by-symptoms-error-" + System.currentTimeMillis());
+            parameters.addParameter("result", new BooleanType(false));
+            parameters.addParameter("error", new StringType("Too many results"));
+            parameters.addParameter("message", new StringType("Found " + results.size() + " matches. Please refine your symptoms to get 20 or fewer results."));
+            parameters.addParameter("resultCount", new IntegerType(results.size()));
+            parameters.addParameter("maxAllowed", new IntegerType(20));
+            return parameters;
+        }
+
+        // NEW LOGIC: Return ALL results (no filtering, no TM2 code search)
+        Parameters parameters = new Parameters();
+        parameters.setId("search-by-symptoms-all-results-" + System.currentTimeMillis());
+        parameters.addParameter("result", new BooleanType(true));
+        parameters.addParameter("totalMatches", new IntegerType(results.size()));
+        parameters.addParameter("matchedSymptoms", new StringType(String.join(", ", symptoms)));
+
+        // Add all results as parameter groups
         for (int i = 0; i < results.size(); i++) {
             NamasteCode namasteCode = results.get(i);
 
-            Parameters entryParameters = new Parameters();
-            entryParameters.setId("symptom-match-" + i);
+            // Create a parameter group for each match
+            Parameters.ParametersParameterComponent matchGroup = new Parameters.ParametersParameterComponent();
+            matchGroup.setName("match");
 
-            // Add code details
+            // Add found code details
             Parameters.ParametersParameterComponent codeParam = new Parameters.ParametersParameterComponent();
             codeParam.setName("code");
             codeParam.addPart().setName("system").setValue(new UriType("http://terminology.hl7.org.in/CodeSystem/namaste"));
             codeParam.addPart().setName("code").setValue(new CodeType(namasteCode.getNamasteCode()));
             codeParam.addPart().setName("display").setValue(new StringType(namasteCode.getNamasteName()));
-            entryParameters.addParameter(codeParam);
+            matchGroup.addPart(codeParam);
+
+            // Add type parameter
+            matchGroup.addPart().setName("type").setValue(new StringType(namasteCode.getNamasteCategory()));
 
             // Add TM2 mapping if available
             if (namasteCode.getIcd11Tm2Code() != null) {
@@ -284,27 +320,74 @@ public class TerminologyFhirService {
                 tm2Param.addPart().setName("display").setValue(new StringType(namasteCode.getIcd11Tm2Name()));
                 tm2Param.addPart().setName("definition").setValue(new StringType(namasteCode.getIcd11Tm2Description()));
                 tm2Param.addPart().setName("link").setValue(new UriType(namasteCode.getIcd11Tm2Uri()));
-                entryParameters.addParameter(tm2Param);
+                matchGroup.addPart(tm2Param);
             }
 
-            // Add descriptions and metadata
+            // Add code description and symptom similarity score
             if (namasteCode.getNamasteDescription() != null) {
-                entryParameters.addParameter("description", new StringType(namasteCode.getNamasteDescription()));
+                matchGroup.addPart().setName("description").setValue(new StringType(namasteCode.getNamasteDescription()));
             }
 
             if (namasteCode.getConfidenceScore() != null) {
-                entryParameters.addParameter("confidenceScore", new DecimalType(namasteCode.getConfidenceScore()));
+                matchGroup.addPart().setName("symptomSimilarityScore").setValue(new DecimalType(namasteCode.getConfidenceScore()));
             }
 
-            entryParameters.addParameter("type", new StringType(namasteCode.getNamasteCategory()));
-
-            // Add to bundle
-            Bundle.BundleEntryComponent entry = new Bundle.BundleEntryComponent();
-            entry.setResource(entryParameters);
-            entry.setFullUrl("Parameters/" + entryParameters.getId());
-            bundle.addEntry(entry);
+            parameters.addParameter(matchGroup);
         }
 
-        return bundle;
+        return parameters;
+
+        // ============================================================================
+        // UNUSED CODE BELOW - KEPT FOR FUTURE REFERENCE (OLD FILTERING LOGIC)
+        // ============================================================================
+        /*
+        // OLD LOGIC: Take the first result (most relevant symptom match)
+        NamasteCode bestSymptomMatch = results.get(0);
+
+        log.info("Best symptom match found: TM2 Code = {}, Symptom Similarity Score = {}", 
+                bestSymptomMatch.getTm2Code(), bestSymptomMatch.getConfidenceScore());
+
+        // Now search by the TM2 code of the best symptom match
+        String tm2Code = bestSymptomMatch.getTm2Code();
+        if (tm2Code == null || tm2Code.trim().isEmpty()) {
+            // If no TM2 code available, return the original match as parameters
+            Parameters parameters = new Parameters();
+            parameters.setId("search-by-symptoms-fallback-" + System.currentTimeMillis());
+            parameters.addParameter("result", new BooleanType(true));
+            parameters.addParameter("message", new StringType("Found symptom match but no TM2 code for further search"));
+
+            // Add the original match details
+            Parameters.ParametersParameterComponent matchGroup = new Parameters.ParametersParameterComponent();
+            matchGroup.setName("match");
+
+            Parameters.ParametersParameterComponent codeParam = new Parameters.ParametersParameterComponent();
+            codeParam.setName("code");
+            codeParam.addPart().setName("system").setValue(new UriType("http://terminology.hl7.org.in/CodeSystem/namaste"));
+            codeParam.addPart().setName("code").setValue(new CodeType(bestSymptomMatch.getNamasteCode()));
+            codeParam.addPart().setName("display").setValue(new StringType(bestSymptomMatch.getNamasteName()));
+            matchGroup.addPart(codeParam);
+
+            // Add symptom similarity score
+            if (bestSymptomMatch.getConfidenceScore() != null) {
+                matchGroup.addPart().setName("symptomSimilarityScore").setValue(new DecimalType(bestSymptomMatch.getConfidenceScore()));
+            }
+
+            parameters.addParameter(matchGroup);
+            return parameters;
+        }
+
+        // Search by the TM2 code to get comprehensive results
+        Parameters codeSearchResults = createSearchByCodeResult(tm2Code);
+        
+        // Add the original symptom similarity score to the results for reference
+        if (bestSymptomMatch.getConfidenceScore() != null) {
+            codeSearchResults.addParameter("originalSymptomSimilarity", new DecimalType(bestSymptomMatch.getConfidenceScore()));
+        }
+        
+        // Add the matched symptoms for reference
+        codeSearchResults.addParameter("matchedSymptoms", new StringType(String.join(", ", symptoms)));
+        
+        return codeSearchResults;
+        */
     }
 }

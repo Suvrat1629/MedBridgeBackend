@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Date;
+import java.util.List;
 
 /**
  * FHIR R4-COMPLIANT Controller for terminology requirements
@@ -58,7 +59,7 @@ public class FhirBundleController {
         log.info("FHIR search by TM2 code: {}", codeValue);
 
         try {
-            Parameters parameters = terminologyFhirService.createSearchByTm2CodeResult(codeValue);
+            Parameters parameters = terminologyFhirService.createSearchByCodeResult(codeValue);
             addFhirMetadata(parameters);
             String fhirJson = terminologyFhirService.toJson(parameters);
             return createFhirResponse(fhirJson);
@@ -77,7 +78,7 @@ public class FhirBundleController {
         log.info("FHIR search by code only: {}", codeValue);
 
         try {
-            Parameters parameters = terminologyFhirService.createSearchByCodeOnlyResult(codeValue);
+            Parameters parameters = terminologyFhirService.createSearchByCodeResult(codeValue);
             addFhirMetadata(parameters);
             String fhirJson = terminologyFhirService.toJson(parameters);
             return createFhirResponse(fhirJson);
@@ -88,21 +89,72 @@ public class FhirBundleController {
     }
 
     /**
-     * MAIN FEATURE 2: FHIR-COMPLIANT Search by Symptoms
-     * Searches in both code_description and tm2_definition fields, returns FHIR Bundle
+     * MAIN FEATURE 2: FHIR-COMPLIANT Search by Symptoms (GET - comma-separated)
+     * Searches in both code_description and tm2_definition fields, finds highest match,
+     * then returns detailed results for that match's TM2 code
+     * Supports: ?query=fever,headache,nausea or ?query=fever headache nausea
      */
     @GetMapping(value = "/search/symptoms", produces = FHIR_JSON_CONTENT_TYPE)
     public ResponseEntity<String> searchBySymptoms(@RequestParam String query) {
         log.info("FHIR search by symptoms: {}", query);
 
         try {
-            Bundle bundle = terminologyFhirService.createSearchBySymptomsResult(query);
-            String fhirJson = terminologyFhirService.toJson(bundle);
+            // Parse symptoms from comma-separated or space-separated string
+            List<String> symptoms = parseSymptoms(query);
+            Parameters parameters = terminologyFhirService.createSearchBySymptomsResult(symptoms);
+            addFhirMetadata(parameters);
+            String fhirJson = terminologyFhirService.toJson(parameters);
             return createFhirResponse(fhirJson);
         } catch (Exception e) {
             log.error("Error in FHIR symptom search", e);
             return createFhirErrorResponse("Symptom search failed", e.getMessage());
         }
+    }
+
+    /**
+     * MAIN FEATURE 2B: FHIR-COMPLIANT Search by Symptoms (POST - JSON array)
+     * Accepts a JSON array of symptoms for more complex queries
+     * Body: {"symptoms": ["fever", "headache", "nausea"]}
+     */
+    @PostMapping(value = "/search/symptoms", produces = FHIR_JSON_CONTENT_TYPE, consumes = "application/json")
+    public ResponseEntity<String> searchBySymptomsPost(@RequestBody java.util.Map<String, List<String>> requestBody) {
+        log.info("FHIR POST search by symptoms: {}", requestBody);
+
+        try {
+            List<String> symptoms = requestBody.get("symptoms");
+            if (symptoms == null || symptoms.isEmpty()) {
+                return createFhirErrorResponse("Invalid request", "symptoms array is required");
+            }
+
+            Parameters parameters = terminologyFhirService.createSearchBySymptomsResult(symptoms);
+            addFhirMetadata(parameters);
+            String fhirJson = terminologyFhirService.toJson(parameters);
+            return createFhirResponse(fhirJson);
+        } catch (Exception e) {
+            log.error("Error in FHIR symptom POST search", e);
+            return createFhirErrorResponse("Symptom search failed", e.getMessage());
+        }
+    }
+
+    /**
+     * Helper method to parse symptoms from various formats
+     */
+    private List<String> parseSymptoms(String query) {
+        if (query == null || query.trim().isEmpty()) {
+            return java.util.List.of();
+        }
+
+        // First try comma-separated
+        if (query.contains(",")) {
+            return java.util.Arrays.stream(query.split(","))
+                    .map(String::trim)
+                    .filter(symptom -> !symptom.isEmpty())
+                    .collect(java.util.stream.Collectors.toList());
+        }
+
+        // Then try space-separated (but keep multi-word symptoms together)
+        // For now, treat the entire query as one symptom if no commas
+        return java.util.List.of(query.trim());
     }
 
     // Helper methods for FHIR compliance
