@@ -1,8 +1,8 @@
-name: digital-ocean-deployment
+name: digital-ocean-deployment2
 region: nyc1
 
 services:
-  - name: namaste-do-web2
+  - name: namaste-do-web
     # Use Docker Hub image (public repository)
     image:
       registry_type: DOCKER_HUB
