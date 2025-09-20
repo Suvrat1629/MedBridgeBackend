@@ -5,10 +5,9 @@ services:
   - name: namaste-do-web
     # Use Docker Hub image (public repository)
     image:
-      registry_type: PLACEHOLDER_REGISTRY_TYPE
-      registry: PLACEHOLDER_REGISTRY
-      repository: PLACEHOLDER_IMAGE_NAME
-      tag: latest
+      name: docker.io/suvrat1629/namaste-web:latest
+      username: suvrat1629
+      password: PLACEHOLDER_DOCKERHUB_PASSWORD
     
     instance_count: 1
     instance_size_slug: basic-xxs
