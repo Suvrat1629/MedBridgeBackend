@@ -65,9 +65,14 @@ jobs:
       with:
         token: ${{ secrets.DIGITALOCEAN_ACCESS_TOKEN }}
     
-    - name: Update app spec with new image
+    - name: Update app spec with new image and credentials
       run: |
-        sed -i 's|YOUR_DOCKER_USERNAME/YOUR_REPO_NAME:latest|${{ secrets.DOCKER_IMAGE_NAME }}:latest|g' .do/app.yaml
+        # Create base64 encoded credentials
+        DOCKER_CREDS=$(echo -n "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" | base64 -w 0)
+        
+        # Update image repository and credentials
+        sed -i 's|suvrat1629/namaste-web|${{ secrets.DOCKER_IMAGE_NAME }}|g' .do/app.yaml
+        sed -i 's|PLACEHOLDER_DOCKER_CREDENTIALS|'$DOCKER_CREDS'|g' .do/app.yaml
     
     - name: Deploy to DigitalOcean App Platform
       run: |
