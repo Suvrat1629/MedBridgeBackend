@@ -7,11 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -253,7 +249,7 @@ public class NamasteTerminologyService {
                 if(!finalCodes.containsKey(code.getType()))
                     finalCodes.put(code.getType(),code);
                 else {
-                    if(tm2docu.isPresent()&&code.getType()==tm2docu.get().getType())
+                    if(tm2docu.isPresent()&& Objects.equals(code.getType(), tm2docu.get().getType()))
                         continue;
                     if(finalCodes.get(code.getType()).getConfidenceScore()<code.getConfidenceScore())
                         finalCodes.put(code.getType(),code);
