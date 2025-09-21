@@ -247,10 +247,14 @@ public class NamasteTerminologyService {
                     .filter(code -> code.getConfidenceScore() != null && code.getConfidenceScore() > 0.6)
                     .collect(Collectors.toList());
             HashMap<String,NamasteCode> finalCodes = new HashMap<>();
+            if(tm2docu.isPresent())
+                finalCodes.put(tm2docu.get().getType(),tm2docu.get());
             for(NamasteCode code : filteredResults){
                 if(!finalCodes.containsKey(code.getType()))
                     finalCodes.put(code.getType(),code);
                 else {
+                    if(tm2docu.isPresent()&&code.getType()==tm2docu.get().getType())
+                        continue;
                     if(finalCodes.get(code.getType()).getConfidenceScore()<code.getConfidenceScore())
                         finalCodes.put(code.getType(),code);
                 }
@@ -396,24 +400,14 @@ public class NamasteTerminologyService {
         if (results.isEmpty()) {
             return List.of();
         }
-
         // Calculate multi-symptom similarity scores and sort by relevance
         List<NamasteCode> scoredResults = results.stream()
-                .map(code -> {
-                    // Calculate similarity score based on all symptoms
-                    double similarityScore = calculateMultiSymptomSimilarityScore(validSymptoms, code);
-                    // Store the similarity score temporarily (we'll use confidence_score field for this)
-                    code.setConfidenceScore(similarityScore);
-                    return code;
-                })
-                .filter(code -> code.getConfidenceScore() > 0.0) // Only keep codes with some relevance
-                .sorted((code1, code2) -> Double.compare(code2.getConfidenceScore(), code1.getConfidenceScore())) // Sort by similarity desc
+                .filter(code -> code.getConfidenceScore() > 0.6) // Only keep codes with some relevance
                 .collect(Collectors.toList());
 
         // Now for each matched document, get all three traditional medicine mappings using searchByCode
         List<DiseaseMapping> groupedResults = new ArrayList<>();
         HashSet<String> processedTm2Codes = new HashSet<>(); // To avoid duplicate processing
-
         for (NamasteCode matchedCode : scoredResults) {
             String tm2Code = matchedCode.getTm2Code();
 
@@ -424,7 +418,7 @@ public class NamasteTerminologyService {
                 log.info("Getting all mappings for TM2 code: {}", tm2Code);
 
                 // Call searchByCode to get all three traditional medicine mappings
-                List<NamasteCode> allMappings = searchByCode(tm2Code);
+                List<NamasteCode> allMappings = searchByCode(matchedCode.getCode());
 
                 if (!allMappings.isEmpty()) {
                     // Create a disease mapping group
@@ -436,6 +430,8 @@ public class NamasteTerminologyService {
                     diseaseMapping.setMappings(allMappings);
 
                     groupedResults.add(diseaseMapping);
+                    if(groupedResults.size()>20)
+                        break;
                     log.info("Added disease group for TM2 code: {} with {} traditional medicine mappings", tm2Code, allMappings.size());
                 }
             }

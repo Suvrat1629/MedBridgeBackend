@@ -56,7 +56,6 @@ public class NamasteCodeRepositoryImpl implements NamasteCodeRepositoryCustom {
 
         // Filter out very short symptoms and escape regex characters
         List<String> validSymptoms = symptoms.stream()
-                .filter(symptom -> symptom != null && symptom.trim().length() >= 2)
                 .map(symptom -> escapeRegexSpecialChars(symptom.trim()))
                 .collect(java.util.stream.Collectors.toList());
 
