@@ -33,48 +33,16 @@ services:
         type: SECRET
         value: PLACEHOLDER_MONGODB_URI
       
-      # ABHA Configuration
-      - key: ABHA_BASE_URL
-        scope: RUN_TIME
-        value: https://sandbox.abdm.gov.in
-      
-      - key: ABHA_CLIENT_ID
+      # JWT Configuration
+      - key: JWT_SECRET
         scope: RUN_TIME
         type: SECRET
-        value: PLACEHOLDER_ABHA_CLIENT_ID
-      
-      - key: ABHA_CLIENT_SECRET
+        value: PLACEHOLDER_JWT_SECRET
+
+      - key: JWT_EXPIRATION_MS
         scope: RUN_TIME
-        type: SECRET
-        value: PLACEHOLDER_ABHA_CLIENT_SECRET
-      
-      - key: ABHA_X_HIP_ID
-        scope: RUN_TIME
-        type: SECRET
-        value: PLACEHOLDER_ABHA_X_HIP_ID
-      
-      - key: ABHA_AUTH_TOKEN
-        scope: RUN_TIME
-        type: SECRET
-        value: PLACEHOLDER_ABHA_AUTH_TOKEN
-      
-      # ABHA Timeout Configuration
-      - key: ABHA_OTP_VALIDITY_MINUTES
-        scope: RUN_TIME
-        value: "10"
-      
-      - key: ABHA_MAX_RETRY_ATTEMPTS
-        scope: RUN_TIME
-        value: "3"
-      
-      - key: ABHA_CONNECTION_TIMEOUT_SECONDS
-        scope: RUN_TIME
-        value: "30"
-      
-      - key: ABHA_READ_TIMEOUT_SECONDS
-        scope: RUN_TIME
-        value: "60"
-      
+        value: "86400000"
+
       # FHIR Configuration
       - key: FHIR_TERMINOLOGY_VERSION
         scope: RUN_TIME
@@ -83,35 +51,12 @@ services:
       - key: FHIR_CODESYSTEM_COUNT
         scope: RUN_TIME
         value: "4500"
-      
-      - key: APP_SECURITY_TERMINOLOGY_PUBLIC
-        scope: RUN_TIME
-        value: "true"
-      
-      # Spring Security Configuration
-      - key: SPRING_SECURITY_USER_NAME
-        scope: RUN_TIME
-        type: SECRET
-        value: PLACEHOLDER_SPRING_USER_NAME
-      
-      - key: SPRING_SECURITY_USER_PASSWORD
-        scope: RUN_TIME
-        type: SECRET
-        value: PLACEHOLDER_SPRING_USER_PASSWORD
-      
-      - key: SPRING_SECURITY_USER_ROLES
-        scope: RUN_TIME
-        value: USER
-      
+
       # Logging Configuration
       - key: LOGGING_LEVEL_COM_NAMASTE_NAMASTE_TO_TM2
         scope: RUN_TIME
         value: DEBUG
-      
-      - key: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_WEB_REACTIVE_FUNCTION_CLIENT
-        scope: RUN_TIME
-        value: DEBUG
-      
+
       - key: LOGGING_LEVEL_ORG_SPRINGFRAMEWORK_SECURITY
         scope: RUN_TIME
         value: DEBUG
