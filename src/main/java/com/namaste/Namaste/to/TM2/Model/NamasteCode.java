@@ -81,49 +81,4 @@ public class NamasteCode {
     public String getIcd11Tm2Uri() {
         return this.tm2Link;
     }
-
-    // For dual coding support - these fields are not in your current document
-    // but keeping for FHIR compatibility
-    public String getIcd11BiomedicineCode() {
-        return null; // Not available in current document structure
-    }
-
-    public String getIcd11BiomedicineName() {
-        return null; // Not available in current document structure
-    }
-
-    public String getIcd11BiomedicineDescription() {
-        return null; // Not available in current document structure
-    }
-
-    public String getIcd11BiomedicineUri() {
-        return null; // Not available in current document structure
-    }
-
-    // Helper methods
-    public String getDisplayName() {
-        return codeTitle + " (" + code + ")";
-    }
-
-    public boolean hasDualCoding() {
-        return false; // Not supported with current document structure
-    }
-
-    public String getAllIcd11Codes() {
-        return tm2Code != null ? "TM2: " + tm2Code : "";
-    }
-
-    public String getMappingConfidence() {
-        if (confidenceScore != null) {
-            if (confidenceScore >= 0.8) return "HIGH";
-            if (confidenceScore >= 0.6) return "MEDIUM";
-            return "LOW";
-        }
-        return "UNKNOWN";
-    }
-
-    // For FHIR compatibility
-    public boolean isActive() {
-        return true; // Assuming all records in collection are active
-    }
 }
