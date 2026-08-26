@@ -8,7 +8,7 @@ A **FHIR R4-compliant Traditional Medicine to ICD-11 TM2 mapping service** built
 ✅ **FHIR R4 compliance** using HAPI FHIR  
 ✅ **Traditional Medicine code search** (NAMASTE/Ayurveda/Siddha/Unani)  
 ✅ **Symptom-based search** with fuzzy matching  
-✅ **ABHA authentication** integration  
+✅ **JWT authentication** (Spring Security, stateless)  
 ✅ **Auto-complete API** for EMR systems  
 ✅ **Confidence-based mapping** scoring
 
@@ -35,6 +35,14 @@ mvn spring-boot:run
 
 ## 📋 **API Endpoints**
 
+### **🔹 JWT Authentication**
+```bash
+POST /api/auth/register   # Create a user, returns a JWT
+POST /api/auth/login      # Authenticate, returns a JWT
+```
+Both are public. Every other endpoint below requires the token from one of these,
+sent as `Authorization: Bearer <token>`.
+
 ### **🔹 Core Terminology Search**
 
 #### **Search by Code (Primary)**
@@ -53,20 +61,6 @@ GET /api/fhir/search/codeonly/{codeValue}
 ```bash
 # Search by symptoms/descriptions
 GET /api/fhir/search/symptoms?query=fever
-```
-
-### **🔹 ABHA Authentication**
-```bash
-POST /api/abha/initialize        # Initialize ABHA flow
-GET  /api/abha/check/{healthId}  # Check health ID
-POST /api/abha/login            # ABHA login
-GET  /api/abha/profile          # Get ABHA profile
-```
-
-### **🔹 Health Checks**
-```bash
-GET /api/terminology/health     # Service status
-GET /api/fhir/health           # FHIR service status
 ```
 
 ---
@@ -105,14 +99,17 @@ GET /api/fhir/health           # FHIR service status
 
 ### **Sample Test Calls**
 ```bash
-# FHIR code search
-curl "http://localhost:8082/api/fhir/search/code/NAM001"
+# 1. Register (or log in) to get a token
+TOKEN=$(curl -s -X POST "http://localhost:8082/api/auth/register" \
+  -H "Content-Type: application/json" \
+  -d '{"username": "demo-user", "password": "demo-password-123"}' | jq -r .token)
 
-# Symptom search
-curl "http://localhost:8082/api/fhir/search/symptoms?query=fever"
+# 2. Call the FHIR endpoints with the token
+curl "http://localhost:8082/api/fhir/search/code/NAM001" \
+  -H "Authorization: Bearer $TOKEN"
 
-# Health check
-curl "http://localhost:8082/api/fhir/health"
+curl "http://localhost:8082/api/fhir/search/symptoms?query=fever" \
+  -H "Authorization: Bearer $TOKEN"
 ```
 
 ### **Expected Response Format (FHIR)**
@@ -150,12 +147,14 @@ curl "http://localhost:8082/api/fhir/health"
 spring.data.mongodb.uri=mongodb+srv://user:pass@cluster.mongodb.net/traditional_medicine_db
 ```
 
-### **ABHA Settings**
+### **JWT Settings**
 ```properties
-abha.base-url=https://sandbox.abdm.gov.in
-abha.client-id=your_client_id
-abha.client-secret=your_client_secret
+# application.properties
+jwt.secret=${JWT_SECRET}
+jwt.expiration-ms=${JWT_EXPIRATION_MS:86400000}
 ```
+`jwt.secret` has no default - set the `JWT_SECRET` env var before starting the app
+(use a long, random value; HMAC-SHA256 needs at least 32 bytes).
 
 ### **FHIR Configuration**
 ```properties
@@ -170,12 +169,12 @@ fhir.codesystem.count=4500
 - **Backend**: Spring Boot 3.5.5
 - **Database**: MongoDB with Spring Data
 - **FHIR**: HAPI FHIR R4 (v6.10.5)
-- **Security**: OAuth2 + ABHA integration
-- **Authentication**: Spring Security
+- **Authentication**: Spring Security + JWT (stateless, `Authorization: Bearer <token>`)
 
 ### **Key Components**
-- `NamasteTerminologyController` - REST endpoints (commented out)
-- `FhirBundleController` - Active FHIR endpoints
+- `AuthController` / `AuthService` - registration, login, JWT issuance
+- `JwtService` / `JwtAuthenticationFilter` / `SecurityConfig` - token validation and route protection
+- `FhirBundleController` - FHIR search endpoints
 - `NamasteTerminologyService` - Core business logic
 - `TerminologyFhirService` - FHIR resource handling
 - `NamasteCodeRepository` - MongoDB data access
@@ -238,8 +237,9 @@ List<NamasteCode> findHighConfidenceMappings();
 
 ## 🔐 **Security Features**
 
-- **ABHA OAuth2** integration for Indian healthcare
-- **Spring Security** configuration
+- **JWT authentication** - stateless, `Authorization: Bearer <token>` on every protected request
+- **BCrypt password hashing** for stored credentials
+- **Spring Security** filter chain (`/api/auth/**` public, everything else authenticated)
 - **FHIR metadata** compliance with Indian EHR standards
 - **Confidentiality tags** on FHIR resources
 
@@ -250,7 +250,7 @@ List<NamasteCode> findHighConfidenceMappings();
 1. **EMR Integration**: Search traditional medicine codes for clinical documentation
 2. **ICD-11 Mapping**: Convert traditional codes to WHO ICD-11 TM2
 3. **Symptom Search**: Find codes based on patient symptoms/descriptions
-4. **ABHA Authentication**: Secure access using Indian health ID system
+4. **JWT Authentication**: Secure, stateless access control for API consumers
 5. **FHIR Compliance**: Standardized healthcare data exchange
 
 ---
@@ -258,10 +258,9 @@ List<NamasteCode> findHighConfidenceMappings();
 ## 🚀 **Development Status**
 
 - ✅ **Core MongoDB integration** working
-- ✅ **FHIR endpoints** active
-- ✅ **ABHA authentication** implemented
+- ✅ **FHIR endpoints** active (JWT-protected)
+- ✅ **JWT authentication** implemented
 - ✅ **Terminology search** functional
-- ⚠️ **REST endpoints** (commented out in controller)
 - ✅ **Test scripts** available
 
 ---

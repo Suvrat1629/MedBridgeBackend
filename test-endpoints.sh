@@ -131,10 +131,14 @@ test_endpoint "Validate FHIR Bundle" \
     200
 
 echo ""
-echo "🔐 5. ABHA AUTHENTICATION (Sample)"
+echo "🔐 5. JWT AUTHENTICATION"
 
-test_endpoint "ABHA Service Health Check" \
-    "curl -X GET '$BASE_URL/api/abha/check/sample-health-id'" \
+test_endpoint "Register User" \
+    "curl -X POST '$BASE_URL/api/auth/register' -H 'Content-Type: application/json' -d '{\"username\": \"demo-user\", \"password\": \"demo-password-123\"}'" \
+    200
+
+test_endpoint "Login" \
+    "curl -X POST '$BASE_URL/api/auth/login' -H 'Content-Type: application/json' -d '{\"username\": \"demo-user\", \"password\": \"demo-password-123\"}'" \
     200
 
 echo ""
